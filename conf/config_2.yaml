@@ -1,0 +1,29 @@
+defaults:
+  - config
+  - _self_
+  - override transition_model: shallowPLRNN
+
+
+
+z_dim: 1
+obs_dim: 19
+training:
+  n_epochs: 50
+  annealing_factor: 0.2
+  annealing_epochs: 25
+optimizer:
+  optim_args:
+    lr:
+      0.05
+guide:
+  rnn:
+    num_layers: 1
+    dropout: 0.1
+    hidden_size: 10
+transition_model:
+  connectivity_module:
+    hidden_dim: 5
+  cov_module:
+    _target_: plrnns.LinearCovariance
+loss:
+  num_particles: 1

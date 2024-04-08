@@ -1,0 +1,2 @@
+_target_: pyro.infer.autoguide.AutoDiagonalNormal
+model: ${transition_model}

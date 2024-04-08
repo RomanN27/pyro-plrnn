@@ -1,0 +1,12 @@
+defaults:
+  - _self_
+  - data: data
+  - guide: rnn
+  - loss: loss
+  - observation_model: linear
+  - optimizer: adam
+  - training: train
+  - transition_model: dendPLRNN
+
+z_dim: 5
+obs_dim: 19

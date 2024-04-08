@@ -1,0 +1,3 @@
+n_epochs: 1000
+annealing_factor: 1.0
+annealing_epochs: 100

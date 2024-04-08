@@ -1,0 +1,9 @@
+_target_: plrnns.PLRNN
+z_dim: ${z_dim}
+connectivity_module:
+  _target_: plrnns.VanillaConnector
+  z_dim: ${z_dim}
+
+cov_module:
+  _target_: plrnns.ConstantCovariance
+  z_dim: ${z_dim}

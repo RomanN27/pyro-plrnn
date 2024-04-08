@@ -1,0 +1,3 @@
+_target_: plrnns.LinearObservationModel
+obs_dim: ${obs_dim}
+z_dim: ${z_dim}

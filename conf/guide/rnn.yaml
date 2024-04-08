@@ -1,0 +1,17 @@
+_target_: guides.RNNGuide
+rnn:
+  _target_: torch.nn.RNN
+  input_size: ${obs_dim}
+  hidden_size: 10
+  nonlinearity: relu
+  batch_first: true
+  bidirectional: false
+  num_layers: 1
+  dropout: 0
+combiner:
+  _target_: plrnns.Combiner
+  z_dim: ${z_dim}
+  rnn_dim: ${guide.rnn.hidden_size}
+dist:
+  _target_: hydra.utils.get_class
+  path: pyro.distributions.Normal

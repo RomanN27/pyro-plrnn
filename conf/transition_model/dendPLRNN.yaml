@@ -1,0 +1,9 @@
+_target_: plrnns.PLRNN
+z_dim: ${z_dim}
+connectivity_module:
+  _target_: plrnns.DendriticConnector
+  z_dim: ${z_dim}
+  B: 10
+cov_module:
+  _target_: plrnns.ConstantCovariance
+  z_dim: ${z_dim}
