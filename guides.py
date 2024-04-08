@@ -14,6 +14,21 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pyro.distributions import TorchDistributionMixin
+from abc import ABC, abstractmethod
+from torch.utils.data import Dataset
+from utils import collate_fn
+class Guide:
+
+    @property
+    def data_set(self) -> Dataset:
+        raise NotImplementedError()
+    @abstractmethod
+    def ___call__(self,batch):
+        pass
+    def __call__(self, batch_indices: list[int]):
+        batch = [self.data_set[ind] for ind in batch_indices]
+        return self.___call__(batch)
+
 
 class RNNGuide(nn.Module):
 
@@ -26,13 +41,8 @@ class RNNGuide(nn.Module):
         self.z_q_0 = nn.Parameter(torch.zeros(self.combiner.z_dim))
         self.h_0 = nn.Parameter(torch.zeros(1, 1, self.rnn.hidden_size))
 
-    def __call__(self,
-                 batch,
-                 batch_reversed,
-                 batch_mask,
-                 batch_seq_lengths,
-                 annealing_factor
-                 ):
+    def __call__(self, batch: list[torch.Tensor]):
+        padded_sequence, batch_reversed, batch_mask, batch_seq_lengths = collate_fn(batch)
         pyro.module("dmm", self)
         T_max =  batch.size(1)
         h_0_contig = self.h_0.expand(
@@ -67,3 +77,4 @@ class RNNGuide(nn.Module):
                 # the latent sampled at this time step will be conditioned upon in the next time step
                 # so keep track of it
                 z_prev = z_t
+

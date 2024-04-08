@@ -6,6 +6,9 @@ from collections import Counter
 from torch.utils.data import Dataset, DataLoader, random_split
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 
+
+
+
 def get_indicate_data() -> torch.Tensor:
     path = Path(r"C:\Users\roman.nefedov\OneDrive\Desktop\INDICATE")
     sub_tensors:list[torch.Tensor] = []
@@ -46,6 +49,29 @@ class IndicateDataSet(Dataset):
 
     def __getitem__(self, item):
         return self.tensors[item]
+
+class IndicateDataSetRNN(IndicateDataSet):
+    @staticmethod
+    def get_mini_batch_mask(mini_batch, seq_lengths):
+        mask = torch.zeros(mini_batch.shape[0:2])
+        for b in range(mini_batch.shape[0]):
+            mask[b, 0: seq_lengths[b]] = torch.ones(seq_lengths[b])
+        return mask
+
+    @staticmethod
+    def collate_fn(data: list[torch.Tensor]):
+        data.sort(key=len, reverse=True)
+        reversed_data = [x.flip(0) for x in data]
+        seq_lengths = [len(x) for x in reversed_data]
+        padded_sequence = pad_sequence(data, batch_first=True)
+        padded_reversed_sequence = pad_sequence(reversed_data, batch_first=True)
+        packed_reversed_sequence = pack_padded_sequence(padded_reversed_sequence, seq_lengths, batch_first=True)
+        batch_mask = IndicateDataLoader.get_mini_batch_mask(padded_sequence, seq_lengths)
+
+        return padded_sequence, packed_reversed_sequence, batch_mask, torch.tensor(seq_lengths)
+
+
+
 
 class IndicateDataLoader(DataLoader):
 
@@ -94,4 +120,5 @@ def get_data_of_one_subject(subject_index: int):
 
 
 if __name__  == "__main__":
-    get_data_of_one_subject(1)
+     train, test, val = get_data_of_one_subject(1)
+     train, test, val = get_data()
