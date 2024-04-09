@@ -1,0 +1,2 @@
+_target_: hydra.utils.get_method
+path: pyro.distributions.Normal

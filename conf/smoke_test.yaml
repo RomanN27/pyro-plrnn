@@ -1,0 +1,9 @@
+defaults:
+  - config
+  - _self_
+  - override data: fake_data
+
+z_dim: 1
+
+training:
+  n_epochs: 1

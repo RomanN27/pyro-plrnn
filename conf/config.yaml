@@ -4,9 +4,12 @@ defaults:
   - guide: rnn
   - loss: loss
   - observation_model: linear
+  - transition_model: dendPLRNN
+  - observation_distribution: normal
+  - transition_distribution: normal
   - optimizer: adam
   - training: train
-  - transition_model: dendPLRNN
+
 
 z_dim: 5
 obs_dim: 19
