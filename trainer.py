@@ -11,7 +11,7 @@ from pyro.poutine import uncondition, trace
 
 from dataloader import get_data_of_one_subject
 from plrnns import LinearObservationModel, PLRNN, Combiner
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset
 from typing import Callable
 from pyro.optim import PyroOptim
 from pyro.infer import ELBO, SVI
@@ -33,7 +33,7 @@ class TrainingConfig:
 class AnnealingTimeSeriesTrainer:
 
     def __init__(self, time_series_model: TimeSeriesModel, variational_distribution: Callable,
-                 data_loader: DataLoader, optimizer: PyroOptim, elbo: ELBO):
+                 data_loader: DataSet, optimizer: PyroOptim, elbo: ELBO):
 
         self.time_series_model = time_series_model
         self.variational_distribution = variational_distribution
@@ -72,12 +72,16 @@ class AnnealingTimeSeriesTrainer:
 
 
 def get_trainer_from_config(cfg):
-    train, test, val = get_data_of_one_subject(cfg.data.subject_index)
+    data = instantiate(cfg.data)
     plrnn = instantiate(cfg.transition_model)
     observation_model = instantiate(cfg.observation_model)
+    observation_distribution = instantiate(cfg.observation_distribution)
+    transition_distribution = instantiate(cfg.transition_distribution)
+    time_series_model = TimeSeriesModel(plrnn, observation_model, observation_distribution, transition_distribution,)
+
     optimizer_class = instantiate(cfg.optimizer.optimizer_class)
     optimizer = optimizer_class(dict(cfg.optimizer.optim_args))
     guide = instantiate(cfg.guide)
     loss = instantiate(cfg.loss)
-    trainer = AnnealingTimeSeriesTrainer(plrnn, observation_model, guide, train, optimizer, loss)
+    trainer = AnnealingTimeSeriesTrainer(time_series_model, guide, data, optimizer, loss)
     return trainer
