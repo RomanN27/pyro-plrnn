@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from pyro.distributions import Distribution, TorchDistributionMixin
 import pyro
 import pyro.distributions as dist
 from typing import Type, Callable, Tuple
@@ -16,7 +15,7 @@ class TimeSeriesModel(nn.Module):
                  observation_model: nn.Module,
                  observation_distribution: Type[TorchDistributionMixinDist],
                  transition_distribution: Type[TorchDistributionMixinDist],
-                 collate_fn: Callable[[list[torch.Tensor]], tuple[torch.Tensor, torch.Tensor]], *args, **kwargs):
+                 collate_fn: Callable[[list[torch.Tensor]], tuple[torch.Tensor, torch.Tensor]] = collate_fn_2, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.transition_model = transition_model
         self.observation_model = observation_model
