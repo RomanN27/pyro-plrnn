@@ -19,7 +19,7 @@ def main(cfg: DictConfig):
     with mlflow.start_run(nested=True) as run:
 
         with open("model_summary.txt", "w", encoding="utf-8") as f:
-            f.write(str(summary(trainer)))
+            f.write(str(summary(trainer.time_series_model)))
 
         mlflow.log_artifact("model_summary.txt")
 
