@@ -1,5 +1,12 @@
-from pyro.distributions import Distribution, TorchDistributionMixin
+from typing import Protocol
 
 
-class TorchDistributionMixinDist(Distribution, TorchDistributionMixin):
-    pass
+class TorchDistributionMixinDist(Protocol):
+    def sample(self, *args, **kwargs):
+        ...
+
+    def log_prob(self, *args, **kwargs):
+        ...
+
+    def mask(self, *args, **kwargs):
+        ...
