@@ -1,1 +1,2 @@
+_target_: dataloader.get_data_of_one_subject
 subject_index: 0

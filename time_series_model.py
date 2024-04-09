@@ -58,10 +58,10 @@ class TimeSeriesModel(nn.Module):
                 z_prev = z_t
 
     def sample_observed_time_series(self,batch):
-        unconditioned_model = trace(uncondition(self.time_series_model))
+        unconditioned_model = trace(uncondition(self))
         # batch doesnt matter, only for shape infering
 
-        unconditioned_model(*batch)
+        unconditioned_model(batch)
 
         filter_observations = lambda pair: pair[0].startswith(self.OBSERVED_VARIABLE_NAME + "_")
 

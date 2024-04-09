@@ -2,6 +2,7 @@ defaults:
   - config
   - _self_
   - override transition_model: shallowPLRNN
+  - override guide:
 
 
 
@@ -14,15 +15,20 @@ training:
 optimizer:
   optim_args:
     lr:
-      0.05
+      1.
 guide:
-  rnn:
-    num_layers: 1
-    dropout: 0.1
-    hidden_size: 10
+  _target_: pyro.infer.autoguide.AutoDiagonalNormal
+  model:
+    _target_: time_series_model.TimeSeriesModel
+    _args_:
+      - ${transition_model}
+      - ${observation_model}
+      - ${observation_distribution}
+      - ${transition_distribution}
+
 transition_model:
   connectivity_module:
-    hidden_dim: 5
+    hidden_dim: 10
   cov_module:
     _target_: plrnns.LinearCovariance
 loss:

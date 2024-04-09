@@ -1,7 +1,7 @@
 defaults:
   - config
   - _self_
-  - override data: fake_data
+  - override data: data
 
 z_dim: 1
 

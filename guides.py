@@ -44,20 +44,22 @@ class RNNGuide(nn.Module):
     def __call__(self, batch: list[torch.Tensor]):
         padded_sequence, batch_reversed, batch_mask, batch_seq_lengths = collate_fn(batch)
         pyro.module("dmm", self)
-        T_max =  batch.size(1)
+        T_max =  padded_sequence.size(1)
+
+        n = padded_sequence.size(0)
         h_0_contig = self.h_0.expand(
-            self.rnn.num_layers, batch.size(0), self.rnn.hidden_size
+            self.rnn.num_layers, n, self.rnn.hidden_size
         ).contiguous()
 
         rnn_output, _ = self.rnn(batch_reversed, h_0_contig)
         # reverse the time-ordering in the hidden state and un-pack it
         rnn_output = pad_and_reverse(rnn_output, batch_seq_lengths)
         # set z_prev = z_q_0 to setup the recursive conditioning in q(z_t |...)
-        z_prev = self.z_q_0.expand(batch.size(0), self.z_q_0.size(0))
+        z_prev = self.z_q_0.expand(n, self.z_q_0.size(0))
 
         # we enclose all the sample statements in the guide in a plate.
         # this marks that each datapoint is conditionally independent of the others.
-        with pyro.plate("z_minibatch", len(batch)):
+        with pyro.plate("z_minibatch", n):
             # sample the latents z one time step at a time
             # we wrap this loop in pyro.markov so that TraceEnum_ELBO can use multiple samples from the guide at each z
             for t in pyro.markov(range(1, T_max + 1)):
@@ -68,11 +70,10 @@ class RNNGuide(nn.Module):
 
 
                 # sample z_t from the distribution z_dist
-                with pyro.poutine.scale(scale=annealing_factor):
 
-                    z_t = pyro.sample(
-                        "z_%d" % t, z_dist.mask(batch_mask[:, t - 1:t]).to_event(1)
-                    )
+                z_t = pyro.sample(
+                    "z_%d" % t, z_dist.mask(batch_mask[:, t - 1:t]).to_event(1)
+                )
 
                 # the latent sampled at this time step will be conditioned upon in the next time step
                 # so keep track of it

@@ -31,7 +31,8 @@ def main(cfg: DictConfig):
                       cfg.training.annealing_epochs)
 
         artificat_path = run.info.artifact_uri.replace("mlflow-artifacts:", "mlartifacts")
-        torch.save(trainer.state_dict(), artificat_path + "/model.pt")
+        torch.save(trainer.time_series_model.state_dict(), artificat_path + "/time_series_model.pt")
+        torch.save(trainer.variational_distribution.state_dict(), artificat_path + "/variational_model.pt")
 
 
 if __name__ == "__main__":
