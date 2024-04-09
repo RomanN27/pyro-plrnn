@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import scipy.io
 import pandas as pd
@@ -5,12 +6,25 @@ import torch
 from collections import Counter
 from torch.utils.data import Dataset, DataLoader, random_split
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
+import os
+from pathlib import Path
+from typing import Optional
 
+INDICATE_PATH: Optional[Path] = Path(os.environ.get("INDICATE_PATH")) if os.environ.get("INDICATE_PATH") else None
 
+def create_fake_mrt_data(n_rois,T, n):
+    # sample different timeseries length with max length T
+    seq_lengths = torch.randint(1,T,(n,))
+    # generate complicated time series using a neural network
+    data = [torch.randn(t,n_rois) for t in seq_lengths]
+    rnn = torch.nn.RNN(n_rois, n_rois)
 
+    for i in range(n):
+        data[i] = rnn(data[i].unsqueeze(1))[0].squeeze(1)
+    return data
 
 def get_indicate_data() -> torch.Tensor:
-    path = Path(r"C:\Users\roman.nefedov\OneDrive\Desktop\INDICATE")
+    path = INDICATE_PATH
     sub_tensors:list[torch.Tensor] = []
     for file_path in path.glob("**/sub*"):
 
@@ -28,9 +42,13 @@ def get_indicate_data() -> torch.Tensor:
 
 class IndicateDataSet(Dataset):
 
-    def __init__(self,indicate_data_path: Path):
-        self.tensors = self.get_indicate_data_tensors(indicate_data_path)
-        self.tensors = [(tensor - tensor.mean())/tensor.std() for tensor in self.tensors]
+    @classmethod
+    def from_path(cls, path: Path = INDICATE_PATH):
+        tensors = cls.get_indicate_data_tensors(path)
+        return cls(tensors)
+
+    def __init__(self,tensors: list[torch.Tensor]):
+        self.tensors = [(tensor - tensor.mean())/tensor.std() for tensor in tensors]
 
 
     @staticmethod
@@ -98,8 +116,8 @@ class IndicateDataLoader(DataLoader):
 
 
 def get_data():
-    path = Path(r"C:\Users\roman.nefedov\OneDrive\Desktop\INDICATE")
-    indicate_data = IndicateDataSet(path)
+    path = INDICATE_PATH
+    indicate_data = IndicateDataSet.from_path(path)
     train, test, val = random_split(indicate_data, [0.8, 0.1, 0.1])
     train = IndicateDataLoader(train, batch_size=12, shuffle=True)
     test = IndicateDataLoader(test, batch_size=len(test), shuffle=True)
@@ -108,8 +126,8 @@ def get_data():
     return train, test, val
 
 def get_data_of_one_subject(subject_index: int):
-    path = Path(r"C:\Users\roman.nefedov\OneDrive\Desktop\INDICATE")
-    indicate_data = IndicateDataSet(path)
+    path = INDICATE_PATH
+    indicate_data = IndicateDataSet.from_path(path)
     indicate_data.tensors = [indicate_data.tensors[subject_index]]
 
     train = IndicateDataLoader(indicate_data, batch_size=1, shuffle=True)
@@ -117,6 +135,22 @@ def get_data_of_one_subject(subject_index: int):
     val = IndicateDataLoader(indicate_data, batch_size=1, shuffle=True)
 
     return train, test, val
+
+def get_fake_data_set():
+    data = create_fake_mrt_data(5, 1000, 1)
+    dataset = IndicateDataSet(data)
+    return dataset
+
+class FakeDataSet(Dataset):
+
+    def __init__(self,n_rois,T,n):
+        self.data = create_fake_mrt_data(n_rois,T,n)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, item):
+        return self.data[item]
 
 
 if __name__  == "__main__":
