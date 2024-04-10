@@ -88,7 +88,7 @@ class LinearCovariance(nn.Module):
         self.max_ = nn.Parameter(torch.ones(1))
     def forward(self,z):
         cov = self.Sigma(z)
-        return self.sigmoid(cov) * self.max_
+        return self.sigmoid(cov) * self.max_ + self.max_/10e5
 
 class OffDiagonalConnector(nn.Module):
 

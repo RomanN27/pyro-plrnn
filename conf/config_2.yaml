@@ -3,19 +3,20 @@ defaults:
   - _self_
   - override transition_model: shallowPLRNN
   - override guide:
+  - override data: fake_data
 
 
 
-z_dim: 1
+z_dim: 5
 obs_dim: 19
 training:
-  n_epochs: 50
-  annealing_factor: 0.2
-  annealing_epochs: 25
+  n_epochs: 500
+  annealing_factor: 0.1
+  annealing_epochs: 100
 optimizer:
   optim_args:
     lr:
-      1.
+      0.01
 guide:
   _target_: pyro.infer.autoguide.AutoDiagonalNormal
   model:
@@ -25,11 +26,12 @@ guide:
       - ${observation_model}
       - ${observation_distribution}
       - ${transition_distribution}
+  init_scale: 0.1
 
 transition_model:
   connectivity_module:
     hidden_dim: 10
   cov_module:
-    _target_: plrnns.LinearCovariance
+    _target_: plrnns.ConstantCovariance
 loss:
   num_particles: 1

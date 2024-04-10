@@ -7,8 +7,8 @@ from trainer import get_trainer_from_config
 import matplotlib.pyplot as plt
 from evaluation.pse import power_spectrum_error
 
-run_id = "e7eb497ddbf14c68a96c705855c71715"
-path =Path(fr"C:\Users\roman.nefedov\PycharmProjects\PLRNN_Family_Variational_Inference\mlruns\0\{run_id}\params\config")
+run_id = "abb8411073a4487a888837ebb9a662fc"
+path =  Path("mlruns") / "0" / run_id / "params" / "config"
 time_series_model_state_dict_path  = f"mlartifacts/0/{run_id}/artifacts/time_series_model.pt"
 variational_model_state_dict_path  = f"mlartifacts/0/{run_id}/artifacts/variational_model.pt"
 config = OmegaConf.load(path)
@@ -27,7 +27,7 @@ untrained_time_series =untrained_trainer.time_series_model.sample_observed_time_
 
 
 roi  = 17
-rois = [1,5,15,18]
+rois = [0,1,2,3]
 fig, axs = plt.subplots(2, 2)
 for roi,ax in  zip(rois,axs.reshape(-1)):
 

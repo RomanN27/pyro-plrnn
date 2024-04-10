@@ -18,10 +18,10 @@ def create_fake_mrt_data(n_rois,T, n):
     # generate complicated time series using a neural network
     data = [torch.randn(t,n_rois) for t in seq_lengths]
     rnn = torch.nn.RNN(n_rois, n_rois)
-
-    for i in range(n):
-        data[i] = rnn(data[i].unsqueeze(1))[0].squeeze(1)
-    return data
+    with torch.no_grad():
+        for i in range(n):
+            data[i] = rnn(data[i].unsqueeze(1))[0].squeeze(1)
+    return data, data, data
 
 def get_indicate_data() -> torch.Tensor:
     path = INDICATE_PATH
@@ -122,10 +122,11 @@ def get_data_of_one_subject(subject_index: int):
 
     return train, test, val
 
-def get_fake_data_set():
-    data = create_fake_mrt_data(5, 1000, 1)
+def get_fake_data_loader(n_rois=5, T=1000, n=1):
+    data,_,_ = create_fake_mrt_data(n_rois, T, n)
     dataset = IndicateDataSet(data)
-    return dataset
+    dataloader = IndicateDataLoader(dataset, batch_size=1, shuffle=True)
+    return dataloader, dataloader, dataloader
 
 class FakeDataSet(Dataset):
 
@@ -137,6 +138,8 @@ class FakeDataSet(Dataset):
 
     def __getitem__(self, item):
         return self.data[item]
+
+
 
 
 if __name__  == "__main__":

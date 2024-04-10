@@ -47,18 +47,26 @@ class AnnealingTimeSeriesTrainer:
     def train(self, n_epochs: int, min_af: int, annealing_epochs: int):
 
         step = 0
-        for epoch in range(n_epochs):
+        min_loss = None
+        last_epoch_loss = 0
+
+        for epoch in (tbar := tqdm(range(n_epochs))):
             epoch_loss = 0.0
             annealing_factor = self.get_annealing_factor(annealing_epochs, epoch, min_af)
 
             with SelectiveScaleMessenger(annealing_factor, self.annealing_selector):
-                for batch in tqdm(self.data_loader):
+                for batch in self.data_loader:
                     loss = self.svi.step(batch)
+                    dict_ = {"last_epoch_loss":last_epoch_loss, "batch_loss": loss, "min_loss": min_loss}
+                    tbar.set_postfix(dict_)
                     epoch_loss += loss
                     if epoch > 5:
-                        mlflow.log_metric("loss", f"{loss:2f}", step=step)
+                        mlflow.log_metric("loss", f"{loss/10000:2f}", step=step)
+
                     step += 1
-                print(epoch_loss)
+                    last_epoch_loss = epoch_loss
+            min_loss = min(min_loss, epoch_loss) if min_loss else epoch_loss
+
 
     def get_annealing_factor(self, annealing_epochs, epoch, min_af) -> float:
         annealing_factor = min_af + (1 - min_af) * min(1, epoch / annealing_epochs)
