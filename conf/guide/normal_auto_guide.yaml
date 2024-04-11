@@ -1,2 +1,9 @@
 _target_: pyro.infer.autoguide.AutoDiagonalNormal
-model: ${transition_model}
+model:
+  _target_: time_series_model.TimeSeriesModel
+  _args_:
+    - ${transition_model}
+    - ${observation_model}
+    - ${observation_distribution}
+    - ${transition_distribution}
+init_scale: 0.1

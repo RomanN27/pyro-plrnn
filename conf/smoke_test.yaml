@@ -2,8 +2,10 @@ defaults:
   - config
   - _self_
   - override data: data
+  #- override guide: normal_auto_guide
 
 z_dim: 1
 
 training:
   n_epochs: 1
+  annealing_factor: 1

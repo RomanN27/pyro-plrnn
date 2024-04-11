@@ -3,26 +3,19 @@ import json
 
 import torch
 from omegaconf import OmegaConf
-from trainer import get_trainer_from_config
+from trainer import AnnealingTrainer
 import matplotlib.pyplot as plt
 from evaluation.pse import power_spectrum_error
 
-run_id = "abb8411073a4487a888837ebb9a662fc"
-path =  Path("mlruns") / "0" / run_id / "params" / "config"
-time_series_model_state_dict_path  = f"mlartifacts/0/{run_id}/artifacts/time_series_model.pt"
-variational_model_state_dict_path  = f"mlartifacts/0/{run_id}/artifacts/variational_model.pt"
-config = OmegaConf.load(path)
+run_id = "97836ebfe5c04f2a90f07355ecd40447"
 
-trainer = get_trainer_from_config(config)
-time_series_model_state_dict = torch.load(time_series_model_state_dict_path)
-variational_distribution_state_dict = torch.load(variational_model_state_dict_path)
-trainer.time_series_model.load_state_dict(time_series_model_state_dict)
-#trainer.variational_distribution.load_state_dict(variational_distribution_state_dict)
+trainer = AnnealingTrainer.get_trainer_from_run_id_config(run_id)
+trainer.load(f"mlartifacts/0/{run_id}/artifacts/model.pt")
 
 batch = next(iter(trainer.data_loader))
 time_series = trainer.time_series_model.sample_observed_time_series(batch)
 
-untrained_trainer = get_trainer_from_config(config)
+untrained_trainer = AnnealingTrainer.get_trainer_from_run_id_config(run_id)
 untrained_time_series =untrained_trainer.time_series_model.sample_observed_time_series(batch)
 
 
@@ -34,7 +27,7 @@ for roi,ax in  zip(rois,axs.reshape(-1)):
     ax.set_title(f"ROI: {roi}")
 
 
-    ax.plot(batch[0][:,roi].detach().numpy(),label="actual_data")
+    ax.plot(batch[0][:,roi].detach().numpy(),label="actual_data",alpha = 0.5)
     ax.plot(time_series[0][:,roi].detach().numpy(), label = "trained_model")
     ax.plot(untrained_time_series[0][:,roi].detach().numpy(),label="untrained_model",alpha = 0.5)
 
