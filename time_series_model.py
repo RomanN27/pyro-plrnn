@@ -3,9 +3,16 @@ import torch.nn as nn
 import pyro
 import pyro.distributions as dist
 from typing import Type, Callable, Tuple
-from custom_typehint import TorchDistributionMixinDist
+
 from utils import collate_fn_2
 from pyro.poutine import trace, uncondition
+from typing import TypeVar, TYPE_CHECKING, Iterable, Optional
+if TYPE_CHECKING:
+    from pyro.distributions import TorchDistributionMixin
+
+D_O = TypeVar("D_O", bound="TorchDistributionMixin")
+D_H = TypeVar("D_H", bound="TorchDistributionMixin")
+
 
 class TimeSeriesModel(nn.Module):
     HIDDEN_VARIABLE_NAME = "z"
@@ -13,9 +20,10 @@ class TimeSeriesModel(nn.Module):
 
     def __init__(self, transition_model: nn.Module,
                  observation_model: nn.Module,
-                 observation_distribution: Type[TorchDistributionMixinDist],
-                 transition_distribution: Type[TorchDistributionMixinDist],
-                 collate_fn: Callable[[list[torch.Tensor]], tuple[torch.Tensor, torch.Tensor]] = collate_fn_2, *args, **kwargs):
+                 observation_distribution: Type[D_O],
+                 transition_distribution: Type[D_H],
+                 collate_fn: Callable[[list[torch.Tensor]], tuple[torch.Tensor, torch.Tensor]] = collate_fn_2, *args,
+                 **kwargs):
         super().__init__(*args, **kwargs)
         self.transition_model = transition_model
         self.observation_model = observation_model
@@ -24,40 +32,65 @@ class TimeSeriesModel(nn.Module):
         self.observation_distribution = observation_distribution
         self.collate_fn = collate_fn
         self.z_0 = nn.Parameter(torch.zeros(self.transition_model.z_dim))
-
-    def sample_observation(self, batch, batch_mask, t, *distribution_parameters):
-        obs_t = pyro.sample(f"{self.OBSERVED_VARIABLE_NAME}_{t}",
-                            self.observation_distribution(*distribution_parameters).mask(
-                                batch_mask[:, t - 1: t]).to_event(1), obs=batch[:, t - 1, :], )
+    
+    @staticmethod
+    def get_mask(t, batch_mask = None) -> Optional[torch.Tensor]:
+        return batch_mask[:,t-1:t] if batch_mask is not None else batch_mask
+    def sample_observation(self, t, batch=None, batch_mask=None, *distribution_parameters):
+        mask =  self.get_mask(t,batch_mask)
+        distribution_instance = self.get_distribution_instance(self.observation_distribution, mask, *distribution_parameters)
+            
+        observation_name = f"{self.OBSERVED_VARIABLE_NAME}_{t}"
+        obs_t = batch[:, t - 1, :] if batch is not None else None
+        obs_t = pyro.sample(observation_name, distribution_instance.to_event(1), obs=obs_t)
         return obs_t
+    
+    @staticmethod
+    def get_distribution_instance(distribution: Type["TorchDistributionMixin"], mask=None, *distribution_parameters: torch.Tensor) -> "TorchDistributionMixin":
+        distribution_instance = distribution(*distribution_parameters)
+        if mask:
+            distribution_instance = distribution_instance.mask(mask)
+        
+        return distribution_instance
 
-    def sample_next_hidden_state(self, batch_mask, t, *distribution_parameters) -> torch.Tensor:
-        z_t = pyro.sample(
-            f"{self.HIDDEN_VARIABLE_NAME}_{t}",
-            self.transition_distribution(*distribution_parameters)
-            .mask(batch_mask[:, t - 1: t])
-            .to_event(1),
-        )
+    def sample_next_hidden_state(self, t: int, batch_mask: Optional[torch.Tensor] =None, *distribution_parameters: torch.Tensor) -> torch.Tensor:
+        hidden_state_name = f"{self.HIDDEN_VARIABLE_NAME}_{t}"
+        mask = self.get_mask(t,batch_mask)
+        distribution_instance = self.get_distribution_instance(self.observation_distribution, mask, *distribution_parameters)
+        
+        z_t = pyro.sample(hidden_state_name, distribution_instance.to_event(1))
         return z_t
 
-    def __call__(self, batch: list[torch.Tensor]):
-        pyro.module("dmm", self)
+    def __call__(self, batch: list[torch.Tensor])-> torch.Tensor:
+        pyro.module("time_series_model", self)
 
         padded_sequence, batch_mask = self.collate_fn(batch)
-        T_max = padded_sequence.size(1)
+        t_max = padded_sequence.size(1)
+        time_range = range(1, t_max + 1)
         n_batches = padded_sequence.size(0)
 
         z_prev = self.z_0.repeat(n_batches, 1)
 
+        z_prev = self.run_over_time_range(z_prev, time_range, n_batches, batch_mask, padded_sequence)
+
+        return z_prev
+
+    def run_over_time_range(self, z_prev: torch.tensor, time_range: Iterable[int], n_batches: int,
+                            batch_mask: Optional[torch.Tensor] = None,
+                            padded_sequence: Optional[torch.Tensor] = None) -> torch.Tensor:
         with pyro.plate("z_minibatch", n_batches):
-            for t in pyro.markov(range(1, T_max + 1)):
-                z_t = self.sample_next_hidden_state(batch_mask, t, *self.transition_model(z_prev))
+            for t in pyro.markov(time_range):
+                z_prev = self.run_step(t, z_prev, padded_sequence, batch_mask)
+        return z_prev
 
-                self.sample_observation(padded_sequence, batch_mask, t, *self.observation_model(z_t))
+    def run_step(self, t: int, z_prev: torch.Tensor, padded_sequence: Optional[torch.Tensor] = None, batch_mask: Optional[torch.Tensor] = None):
+        z_t = self.sample_next_hidden_state(t, batch_mask, *self.transition_model(z_prev))
 
-                z_prev = z_t
+        self.sample_observation(t, padded_sequence, batch_mask, *self.observation_model(z_t))
 
-    def sample_observed_time_series(self,batch):
+        return z_t
+
+    def sample_observed_time_series(self, batch):
         unconditioned_model = trace(uncondition(self))
         # batch doesnt matter, only for shape infering
 
