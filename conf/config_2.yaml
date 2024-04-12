@@ -2,7 +2,7 @@ defaults:
   - config
   - _self_
   - override transition_model: shallowPLRNN
-  - override data: data
+  - override data: fake_data
 
 
 

@@ -14,7 +14,7 @@ INDICATE_PATH: Optional[Path] = Path(os.environ.get("INDICATE_PATH")) if os.envi
 
 def create_fake_mrt_data(n_rois,T, n):
     # sample different timeseries length with max length T
-    seq_lengths = torch.randint(1,T,(n,))
+    seq_lengths = [T for _ in range(n)]
     # generate complicated time series using a neural network
     data = [torch.randn(t,n_rois) for t in seq_lengths]
     rnn = torch.nn.RNN(n_rois, n_rois)
