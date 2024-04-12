@@ -32,7 +32,7 @@ batch = next(iter(trainer.data_loader))
 pred = Predictive(trainer.time_series_model,guide= trainer.variational_distribution,num_samples=1000,parallel=True,return_sites=[f"x_{i}" for i in range(525)])
 num_samples = 1000
 vectorize = pyro.plate(
-        "_num_predictive_samples", num_samples,dim=-1
+        "_num_predictive_samples", num_samples,dim=-2
     )
 time_steps_to_predict = 100
 t_0 = batch[0].size(0) + 1

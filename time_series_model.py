@@ -75,7 +75,7 @@ class TimeSeriesModel(nn.Module):
 
         return z_prev
 
-    def run_over_time_range(self, z_prev: torch.tensor, time_range: Iterable[int], n_batches: int,
+    def run_over_time_range(self, z_prev: torch.Tensor, time_range: Iterable[int], n_batches: int,
                             batch_mask: Optional[torch.Tensor] = None,
                             padded_sequence: Optional[torch.Tensor] = None) -> torch.Tensor:
         with pyro.plate("z_minibatch", n_batches):
