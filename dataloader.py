@@ -12,22 +12,23 @@ from typing import Optional
 
 INDICATE_PATH: Optional[Path] = Path(os.environ.get("INDICATE_PATH")) if os.environ.get("INDICATE_PATH") else None
 
-def create_fake_mrt_data(n_rois,T, n):
+
+def create_fake_mrt_data(n_rois, T, n):
     # sample different timeseries length with max length T
     seq_lengths = [T for _ in range(n)]
     # generate complicated time series using a neural network
-    data = [torch.randn(t,n_rois) for t in seq_lengths]
+    data = [torch.randn(t, n_rois) for t in seq_lengths]
     rnn = torch.nn.RNN(n_rois, n_rois)
     with torch.no_grad():
         for i in range(n):
             data[i] = rnn(data[i].unsqueeze(1))[0].squeeze(1)
     return data, data, data
 
+
 def get_indicate_data() -> torch.Tensor:
     path = INDICATE_PATH
-    sub_tensors:list[torch.Tensor] = []
+    sub_tensors: list[torch.Tensor] = []
     for file_path in path.glob("**/sub*"):
-
         mat = scipy.io.loadmat(file_path)
         data = torch.tensor(mat["data"])
         sub_tensors.append(data)
@@ -35,7 +36,7 @@ def get_indicate_data() -> torch.Tensor:
         #get_columns = lambda name, x : [f"{name}_{i}" for i in range(x.shape[1])]
     tensor_sizes = Counter([t.shape for t in sub_tensors])
     most_common_tensor_size = tensor_sizes.most_common(1)[0][0]
-    sub_tensors = list(filter(lambda x: x.shape == most_common_tensor_size,sub_tensors))
+    sub_tensors = list(filter(lambda x: x.shape == most_common_tensor_size, sub_tensors))
     tensor = torch.stack(sub_tensors)
     return tensor
 
@@ -47,18 +48,17 @@ class IndicateDataSet(Dataset):
         tensors = cls.get_indicate_data_tensors(path)
         return cls(tensors)
 
-    def __init__(self,tensors: list[torch.Tensor]):
-        self.tensors = [(tensor - tensor.mean())/tensor.std() for tensor in tensors]
-
+    def __init__(self, tensors: list[torch.Tensor] | torch.Tensor):
+        self.tensors = [(tensor - tensor.mean()) / tensor.std() for tensor in tensors]
+        self.tloc = tLocIndexer(self)
 
     @staticmethod
     def get_indicate_data_tensors(indicate_data_path):
         sub_tensors: list[torch.Tensor] = []
         for file_path in indicate_data_path.glob("**/sub*"):
             mat = scipy.io.loadmat(file_path)
-            data = torch.tensor(mat["data"],dtype=torch.float32)
+            data = torch.tensor(mat["data"], dtype=torch.float32)
             sub_tensors.append(data)
-
 
         return sub_tensors
 
@@ -67,6 +67,7 @@ class IndicateDataSet(Dataset):
 
     def __getitem__(self, item):
         return self.tensors[item]
+
 
 class IndicateDataSetRNN(IndicateDataSet):
     @staticmethod
@@ -89,12 +90,33 @@ class IndicateDataSetRNN(IndicateDataSet):
         return padded_sequence, packed_reversed_sequence, batch_mask, torch.tensor(seq_lengths)
 
 
+class tLocIndexer:
+    def __init__(self, data_set: IndicateDataSet):
+        self.data_set = data_set
+
+    def __getitem__(self, item):
+        return IndicateDataSet([tensor[item] for tensor in self.data_set.tensors])
+
+
+def ts_train_test_split(data: IndicateDataSet, n_test_time_steps: int | list[int]) -> list[IndicateDataSet]:
+    datasets = []
+    if isinstance(n_test_time_steps, list):
+        t_0 = sum(n_test_time_steps)
+        t_list = n_test_time_steps[1:]
+        t_list = t_list if len(t_list) > 1 else t_list[0]
+
+        datasets.append(data.tloc[:-t_0])
+        datasets.extend(ts_train_test_split(data.tloc[-t_0:], t_list))
+    else:
+        return [data.tloc[:-n_test_time_steps], data.tloc[-n_test_time_steps:]]
+
+    return datasets
 
 
 class IndicateDataLoader(DataLoader):
 
-    def __init__(self,*args,**kwargs):
-        super().__init__(collate_fn=self.collate_fn, *args,**kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(collate_fn=self.collate_fn, *args, **kwargs)
 
     @staticmethod
     def collate_fn(data: list[torch.Tensor]):
@@ -111,27 +133,32 @@ def get_data():
 
     return train, test, val
 
-def get_data_of_one_subject(subject_index: int):
+
+def get_data_of_one_subject(subject_index: int, test_steps: int = 20, val_steps: int = 20):
     path = INDICATE_PATH
     indicate_data = IndicateDataSet.from_path(path)
-    indicate_data.tensors = [indicate_data.tensors[subject_index]]
+    indicate_data_set = IndicateDataSet([indicate_data[subject_index]])
 
-    train = IndicateDataLoader(indicate_data, batch_size=1, shuffle=True)
-    test = IndicateDataLoader(indicate_data, batch_size=1, shuffle=True)
-    val = IndicateDataLoader(indicate_data, batch_size=1, shuffle=True)
+    train, test, val = ts_train_test_split(indicate_data_set, [test_steps, val_steps])
+
+    train = IndicateDataLoader(train, batch_size=1, shuffle=True)
+    test = IndicateDataLoader(test, batch_size=1, shuffle=True)
+    val = IndicateDataLoader(val, batch_size=1, shuffle=True)
 
     return train, test, val
 
+
 def get_fake_data_loader(n_rois=5, T=1000, n=1):
-    data,_,_ = create_fake_mrt_data(n_rois, T, n)
+    data, _, _ = create_fake_mrt_data(n_rois, T, n)
     dataset = IndicateDataSet(data)
     dataloader = IndicateDataLoader(dataset, batch_size=1, shuffle=True)
     return dataloader, dataloader, dataloader
 
+
 class FakeDataSet(Dataset):
 
-    def __init__(self,n_rois,T,n):
-        self.data = create_fake_mrt_data(n_rois,T,n)
+    def __init__(self, n_rois, T, n):
+        self.data = create_fake_mrt_data(n_rois, T, n)
 
     def __len__(self):
         return len(self.data)
@@ -140,8 +167,6 @@ class FakeDataSet(Dataset):
         return self.data[item]
 
 
-
-
-if __name__  == "__main__":
-     train, test, val = get_data_of_one_subject(1)
-     train, test, val = get_data()
+if __name__ == "__main__":
+    train, test, val = get_data_of_one_subject(1)
+    train, test, val = get_data()
