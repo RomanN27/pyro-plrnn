@@ -3,9 +3,9 @@ import os
 
 import tqdm
 from hydra.utils import instantiate
-from pyro.poutine import scale
+from pyro.poutine import scale, block
 from torch.utils.data import Dataset, Sampler, RandomSampler
-from typing import Callable
+from typing import Callable, Optional
 from pyro.optim import PyroOptim
 from pyro.infer import ELBO, SVI
 from dataclasses import dataclass
@@ -120,6 +120,8 @@ class AnnealingTrainer(Trainer):
         name = msg["name"]
         return name and bool(re.match(pattern, name))
 
+    def annealing_hider(self,msg: "Message") -> bool:
+        return not self.annealing_selector(msg)
     def train(self, n_epochs: int, annealing_factor: int, annealing_epochs: int):
 
         step = 0
@@ -130,19 +132,21 @@ class AnnealingTrainer(Trainer):
             epoch_loss = 0.0
             annealing_factor = self.get_annealing_factor(annealing_epochs, epoch, annealing_factor)
 
-            with SelectiveScaleMessenger(annealing_factor, self.annealing_selector):
-                for batch in self.data_loader:
-                    loss = self.svi.step(batch)
-                    dict_ = {"last_epoch_loss": last_epoch_loss, "batch_loss": loss, "min_loss": min_loss}
-                    tbar.set_postfix(dict_)
-                    epoch_loss += loss
-                    if epoch > 5:
-                        mlflow.log_metric("loss", f"{loss / 10000:2f}", step=step)
+            with scale(scale = annealing_factor):
+                with block(hide_fn=self.annealing_hider):
+                    for batch in self.data_loader:
+                        loss = self.svi.step(batch)
+                        dict_ = {"last_epoch_loss": last_epoch_loss, "batch_loss": loss, "min_loss": min_loss}
+                        tbar.set_postfix(dict_)
+                        epoch_loss += loss
+                        if epoch > 5:
+                            mlflow.log_metric("loss", f"{loss / 10000:2f}", step=step)
 
-                    step += 1
-                    last_epoch_loss = epoch_loss
+                        step += 1
+                        last_epoch_loss = epoch_loss
             min_loss = min(min_loss, epoch_loss) if min_loss else epoch_loss
 
     def get_annealing_factor(self, annealing_epochs, epoch, min_af) -> float:
         annealing_factor = min_af + (1 - min_af) * min(1, epoch / annealing_epochs)
         return annealing_factor
+
