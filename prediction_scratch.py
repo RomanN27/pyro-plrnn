@@ -14,7 +14,7 @@ from pathlib import Path
 import os
 import pyro
 from pyro.contrib.autoname import scope
-run_id = "3874118a7da743a3a6b005e1b44f832d"
+run_id = "8f8268fef6e84ffa9f5ce616c753ef91"
 
 path = Path(os.environ.get("MLFLOW_TRACKING_URI",__file__)).parent
 trainer = AnnealingTrainer.get_trainer_from_run_id_config(run_id)
@@ -32,17 +32,25 @@ batch = next(iter(trainer.data_loader))
 pred = Predictive(trainer.time_series_model,guide= trainer.variational_distribution,num_samples=1000,parallel=True,return_sites=[f"x_{i}" for i in range(525)])
 num_samples = 1000
 vectorize = pyro.plate(
-        "_num_predictive_samples", num_samples,dim=-2
-    )
+        "_num_predictive_samples", num_samples )
 time_steps_to_predict = 100
 t_0 = batch[0].size(0) + 1
 time_range = range(t_0,t_0+  time_steps_to_predict )
 
 #with pyro.plate("MC", num_samples)
 with pyro.poutine.trace() as tracer:
-    z_h = vectorize(trainer.time_series_model)(batch)
-    with scope(prefix = "pred"):
-        trainer.time_series_model.run_over_time_range(z_h,time_range,1)
+    with pyro.plate("_num_predictive_samples", num_samples ):
+        trainer.variational_distribution(batch)
+
+replayed_model = pyro.poutine.replay(trainer.time_series_model, trace = tracer.trace)
+
+with pyro.poutine.trace() as tracer:
+    with pyro.plate("_num_predictive_samples", num_samples ):
+
+        z_h = replayed_model(batch)
+
+        with scope(prefix = "pred"):
+            trainer.time_series_model.run_over_time_range(z_h, time_range)
 #a = tracer.trace.stochastic_nodes[-3:]
 
 #pyro.sample("test",pyro.distributions.Normal(torch.zeros(5),torch.ones(1)), obs= torch.empty(5))
@@ -57,16 +65,16 @@ def get_predicted_observed_values_from_trace(trace: pyro.poutine.trace_struct.Tr
     inputed_observed_nodes = [trace.nodes[obs_node] for obs_node in trace.observation_nodes]
     inputed_observed_values = get_values_from_nodes(inputed_observed_nodes)
     inputed_observed_values = torch.stack(inputed_observed_values)
-
+    inputed_observed_values = inputed_observed_values.transpose(0,1)
     #regex to get all stochastic nodes beginning with pred/x_
     pred_nodes = [trace.nodes[pred_node] for pred_node in trace.stochastic_nodes if pred_node.startswith("pred/x_")]
     pred_values = get_values_from_nodes(pred_nodes)
     pred_values = torch.stack(pred_values)
-
+    pred_values = pred_values.transpose(0,-2)
     n_mc_samples = pred_values.size(0)
     inputed_observed_values = inputed_observed_values.unsqueeze(0).expand(n_mc_samples,-1,-1,-1)
 
-    all_values = torch.cat([inputed_observed_values,pred_values],dim=1)
+    all_values = torch.cat([inputed_observed_values,pred_values],dim=-2)
     return all_values
 
 get_predicted_observed_values_from_trace(tracer.trace)

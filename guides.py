@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 from abc import ABC, abstractmethod
 from torch.utils.data import Dataset
 from utils import collate_fn
+from custom_typehint import TensorIterable
 class Guide:
 
     @property
@@ -41,7 +42,7 @@ class RNNGuide(nn.Module):
         self.z_q_0 = nn.Parameter(torch.zeros(self.combiner.z_dim))
         self.h_0 = nn.Parameter(torch.zeros(1, 1, self.rnn.hidden_size))
 
-    def __call__(self, batch: list[torch.Tensor]):
+    def __call__(self, batch: TensorIterable):
         padded_sequence, batch_reversed, batch_mask, batch_seq_lengths = collate_fn(batch)
         pyro.module("dmm", self)
         T_max =  padded_sequence.size(1)

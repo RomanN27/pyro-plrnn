@@ -7,6 +7,7 @@ from typing import Type, Callable, Tuple
 from utils import collate_fn_2
 from pyro.poutine import trace, uncondition
 from typing import TypeVar, TYPE_CHECKING, Iterable, Optional
+from custom_typehint import TensorIterable
 if TYPE_CHECKING:
     from pyro.distributions import TorchDistributionMixin
 
@@ -22,7 +23,7 @@ class TimeSeriesModel(nn.Module):
                  observation_model: nn.Module,
                  observation_distribution: Type[D_O],
                  transition_distribution: Type[D_H],
-                 collate_fn: Callable[[list[torch.Tensor]], tuple[torch.Tensor, torch.Tensor]] = collate_fn_2, *args,
+                 collate_fn: Callable[[TensorIterable], tuple[torch.Tensor, torch.Tensor]] = collate_fn_2, *args,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.transition_model = transition_model
@@ -61,7 +62,7 @@ class TimeSeriesModel(nn.Module):
         z_t = pyro.sample(hidden_state_name, distribution_instance.to_event(1))
         return z_t
 
-    def __call__(self, batch: list[torch.Tensor])-> torch.Tensor:
+    def __call__(self, batch: TensorIterable)-> torch.Tensor:
         pyro.module("time_series_model", self)
 
         padded_sequence, batch_mask = self.collate_fn(batch)
@@ -71,13 +72,14 @@ class TimeSeriesModel(nn.Module):
 
         z_prev = self.z_0.repeat(n_batches, 1)
 
-        z_prev = self.run_over_time_range(z_prev, time_range, n_batches, batch_mask, padded_sequence)
+        z_prev = self.run_over_time_range(z_prev, time_range, batch_mask, padded_sequence)
 
         return z_prev
 
-    def run_over_time_range(self, z_prev: torch.Tensor, time_range: Iterable[int], n_batches: int,
+    def run_over_time_range(self, z_prev: torch.Tensor, time_range: Iterable[int],
                             batch_mask: Optional[torch.Tensor] = None,
                             padded_sequence: Optional[torch.Tensor] = None) -> torch.Tensor:
+        n_batches = len(batch_mask)
         with pyro.plate("z_minibatch", n_batches):
             for t in pyro.markov(time_range):
                 z_prev = self.run_step(t, z_prev, padded_sequence, batch_mask)
