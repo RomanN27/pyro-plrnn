@@ -125,7 +125,7 @@ def normalize_to_pdf_with_laplace_smoothing(histogram, n_bins, smoothing_alpha=1
     return pdf
 
 
-def get_pdf_from_timeseries(x_gen, x_true, n_bins):
+def get_pdf_from_timeseries(x_gen, x_true, n_bins,smoothing_alpha = 10e-6):
     """
     Calculate spatial pdf of time series x1 and x2
     :param x_gen: multivariate time series: shape (T, dim)
@@ -137,14 +137,14 @@ def get_pdf_from_timeseries(x_gen, x_true, n_bins):
     hist_gen = calc_histogram(x_gen, n_bins=n_bins, min_=min_, max_=max_)
     hist_true = calc_histogram(x_true, n_bins=n_bins, min_=min_, max_=max_)
 
-    p_gen = normalize_to_pdf_with_laplace_smoothing(histogram=hist_gen, n_bins=n_bins)
-    p_true = normalize_to_pdf_with_laplace_smoothing(histogram=hist_true, n_bins=n_bins)
+    p_gen = normalize_to_pdf_with_laplace_smoothing(histogram=hist_gen, n_bins=n_bins,smoothing_alpha=smoothing_alpha)
+    p_true = normalize_to_pdf_with_laplace_smoothing(histogram=hist_true, n_bins=n_bins,smoothing_alpha=smoothing_alpha)
     return p_gen, p_true
 
 
-def klx_metric(x_gen, x_true, n_bins=30):
+def klx_metric(x_gen, x_true, n_bins=30,smoothing_alpha = 10e-6):
     # plot_kl(x_gen, x_true, n_bins)
-    p_gen, p_true = get_pdf_from_timeseries(x_gen, x_true, n_bins)
+    p_gen, p_true = get_pdf_from_timeseries(x_gen, x_true, n_bins,smoothing_alpha = smoothing_alpha)
     return kullback_leibler_divergence(p_true, p_gen)
 
 

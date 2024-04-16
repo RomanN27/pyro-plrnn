@@ -17,7 +17,11 @@ class Forecaster:
         self.model = model
         self.guide = guide
 
-    def __call__(self, batch: TensorIterable, t: int, n_samples: int, probabilistic: bool = True) -> torch.Tensor:
+    def __call__(self, batch: TensorIterable, t: int, n_samples: int, probabilistic: bool = True, truncate_batch: bool = False) -> torch.Tensor:
+        #in case the time series in batch contain the values that should be predicted
+        if truncate_batch:
+            batch  = [ts[:-t] for ts in batch]
+
         guide_trace = self.get_guide_trace(batch, n_samples)
         posterior_model_trace = self.run_model_over_posterior_distribution(batch, guide_trace, t, n_samples)
 
@@ -27,6 +31,8 @@ class Forecaster:
             predictive_tensor = predictive_tensor.mean(0)
 
         return predictive_tensor
+
+
 
     def get_guide_trace(self, batch: TensorIterable, n_samples: int) -> Trace:
         traced_guide = trace(self.guide)

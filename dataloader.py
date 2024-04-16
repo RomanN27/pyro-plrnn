@@ -7,6 +7,7 @@ from collections import Counter
 from torch.utils.data import Dataset, DataLoader, random_split
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 import os
+import numpy as np
 from pathlib import Path
 from typing import Optional
 
@@ -99,18 +100,14 @@ class tLocIndexer:
 
 
 def ts_train_test_split(data: IndicateDataSet, n_test_time_steps: int | list[int]) -> list[IndicateDataSet]:
-    datasets = []
-    if isinstance(n_test_time_steps, list):
-        t_0 = sum(n_test_time_steps)
-        t_list = n_test_time_steps[1:]
-        t_list = t_list if len(t_list) > 1 else t_list[0]
+    #example
+    #n_test_time_steps = [10, 20 ,20]
+    # data[:-50] , data[:-40] , data[:-20], data
 
-        datasets.append(data.tloc[:-t_0])
-        datasets.extend(ts_train_test_split(data.tloc[-t_0:], t_list))
-    else:
-        return [data.tloc[:-n_test_time_steps], data.tloc[-n_test_time_steps:]]
-
+    datasets = [data.tloc[:-t] for t in np.cumsum(n_test_time_steps)[::-1]]
+    datasets.append(data)
     return datasets
+
 
 
 class IndicateDataLoader(DataLoader):
