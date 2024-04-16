@@ -9,9 +9,9 @@ from torchinfo import summary
 mlflow.set_tracking_uri(uri="http://127.0.0.1:5000")
 
 
-@hydra.main(version_base=None, config_path="conf", config_name="config")
+@hydra.main(version_base=None, config_path="conf", config_name="default_config")
 def main(cfg: DictConfig):
-
+    a = OmegaConf.create(cfg)
     cfg, trainer = get_and_load_trainer(cfg)
 
     with mlflow.start_run(nested=True) as run:

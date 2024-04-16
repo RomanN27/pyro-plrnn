@@ -1,3 +1,0 @@
-_target_: evaluation.metrics.KLDivergenceObservedSpace
-n_bins: 30
-smoothing_alpha: 10e-6

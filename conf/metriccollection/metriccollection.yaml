@@ -1,0 +1,10 @@
+defaults:
+  - metrics:
+    - klx
+    - pse
+    - nstepmse
+
+kwargs:
+  n_steps: 30
+  n_samples: 1000
+

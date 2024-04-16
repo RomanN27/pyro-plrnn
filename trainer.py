@@ -23,6 +23,7 @@ from omegaconf import DictConfig
 from abc import ABC, abstractmethod
 from pathlib import Path
 from omegaconf import OmegaConf
+from evaluation.metrics import PyroTimeSeriesMetricCollection
 @dataclass
 class TrainingConfig:
     annealing_factor: float = 1.0
@@ -56,7 +57,8 @@ class Trainer(ABC):
         observation_distribution = instantiate(cfg.observation_distribution)
         transition_distribution = instantiate(cfg.transition_distribution)
         time_series_model = TimeSeriesModel(plrnn, observation_model, observation_distribution, transition_distribution)
-        metrics = instantiate(cfg.metric)
+        metrics = [instantiate(metric) for metric in cfg.metriccollection.metrics.values()]
+        metric_collection = PyroTimeSeriesMetricCollection(metrics,**cfg.metriccollection.kwargs)
         optimizer_class = instantiate(cfg.optimizer.optimizer_class)
         optimizer = optimizer_class(dict(cfg.optimizer.optim_args))
         guide = instantiate(cfg.guide)

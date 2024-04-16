@@ -3,9 +3,9 @@ import torch
 from custom_typehint import TensorIterable
 from torch import Tensor
 from torchmetrics import MeanSquaredError, Metric, MetricCollection
-from pse import  get_average_spectrum
+from evaluation.pse import  get_average_spectrum
 import numpy as np
-from klx import klx_metric
+from evaluation.klx import klx_metric
 if TYPE_CHECKING:
     from time_series_model import TimeSeriesModel
 from forecaster import Forecaster
@@ -13,9 +13,10 @@ from forecaster import Forecaster
 class NStepMeanSquaredError(MeanSquaredError):
 
     def __init__(self,n_steps: int,time_dimension: int = -2, *args,**kwargs):
+        super().__init__(*args, **kwargs)
         self.n_steps = n_steps
         self.time_dimension = time_dimension
-        super().__init__(*args,**kwargs)
+
     def update(self, x_gen: Tensor, x_true: Tensor) -> None:
         target_length = self.n_steps
         t_start = x_gen.size(self.time_dimension) - target_length
@@ -28,11 +29,12 @@ class PowerSpectrumCorrelation(Metric):
     higher_is_better = True
 
     def __init__(self, smoothing_sigma: float, frequency_cutoff: int):
+        super().__init__()
         self.smoothing_sigma = smoothing_sigma
         self.frequency_cutoff = frequency_cutoff
         self.add_state("avg_spectrum_gen", default=[])
         self.add_state("avg_spectrum_true", default=[])
-        super().__init__()
+
 
     def update(self, x_gen: Tensor, x_true: Tensor) -> None:
         assert x_true.shape[1] == x_gen.shape[1]
@@ -63,10 +65,11 @@ class PowerSpectrumCorrelation(Metric):
 
 class KLDivergenceObservedSpace(Metric):
     def __init__(self, n_bins: int, smoothing_alpha):
+        super().__init__()
         self.n_bins = n_bins
         self.smoothing_alpha = smoothing_alpha
         self.add_state("kldivergence", default=torch.tensor(0), dist_reduce_fx="sum")
-        super().__init__()
+
 
     def update(self, x_gen: Tensor, x_true: Tensor) -> None:
         self.kldivergence = klx_metric(x_gen, x_true, self.n_bins, self.smoothing_alpha)
@@ -76,11 +79,12 @@ class KLDivergenceObservedSpace(Metric):
 
 
 class PyroTimeSeriesMetricCollection(MetricCollection):
-    def __init__(self, n_steps: int, truncate_batch:bool = True, n_samples: int = 1000, *args, **kwargs):
+    def __init__(self,  metrics: list[Metric],n_steps: int, truncate_batch:bool = True, n_samples: int = 1000 ):
+        super().__init__(metrics)
         self.n_steps = n_steps
         self.truncate_batch = truncate_batch
         self.n_samples = n_samples
-        super().__init__(*args, **kwargs)
+
     def update_from_model(self,forecaster: Forecaster, x_true: TensorIterable):
 
         x_gen = forecaster(x_true,self.n_steps,self.n_samples,truncate_batch=self.truncate_batch)
