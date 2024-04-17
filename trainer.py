@@ -7,7 +7,7 @@ from pyro.poutine import scale, block
 from torch.utils.data import Dataset, Sampler, RandomSampler
 from typing import Callable, Optional
 from pyro.optim import PyroOptim
-from pyro.infer import ELBO, SVI
+from pyro.infer import ELBO, SVI, Predictive
 from dataclasses import dataclass
 from tqdm import tqdm
 import mlflow
