@@ -60,23 +60,24 @@ class RNNGuide(nn.Module):
 
         # we enclose all the sample statements in the guide in a plate.
         # this marks that each datapoint is conditionally independent of the others.
-        with pyro.plate("z_minibatch", n):
-            # sample the latents z one time step at a time
-            # we wrap this loop in pyro.markov so that TraceEnum_ELBO can use multiple samples from the guide at each z
-            for t in pyro.markov(range(1, T_max + 1)):
-                # the next two lines assemble the distribution q(z_t | z_{t-1}, x_{t:T})
-                z_loc, z_scale = self.combiner(z_prev, rnn_output[:, t - 1, :])
 
-                z_dist = self.dist(z_loc,z_scale)
+        # sample the latents z one time step at a time
+        # we wrap this loop in pyro.markov so that TraceEnum_ELBO can use multiple samples from the guide at each z
+        for t in pyro.markov(range(1, T_max + 1)):
+            # the next two lines assemble the distribution q(z_t | z_{t-1}, x_{t:T})
+            z_loc, z_scale = self.combiner(z_prev, rnn_output[:, t - 1, :])
+
+            z_dist = self.dist(z_loc,z_scale)
 
 
-                # sample z_t from the distribution z_dist
+            # sample z_t from the distribution z_dist
 
-                z_t = pyro.sample(
-                    "z_%d" % t, z_dist.mask(batch_mask[:, t - 1:t]).to_event(1)
-                )
+            masked_distribution = z_dist.mask(batch_mask[:, t - 1:t])
+            z_t = pyro.sample(
+                "z_%d" % t, masked_distribution.to_event(1)
+            )
 
-                # the latent sampled at this time step will be conditioned upon in the next time step
-                # so keep track of it
-                z_prev = z_t
+            # the latent sampled at this time step will be conditioned upon in the next time step
+            # so keep track of it
+            z_prev = z_t
 

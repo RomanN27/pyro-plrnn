@@ -13,10 +13,10 @@ trainer = AnnealingTrainer.get_trainer_from_run_id_config(run_id)
 trainer.load(f"mlartifacts/0/{run_id}/artifacts/model.pt")
 
 batch = next(iter(trainer.data_loader))
-time_series = trainer.time_series_model.sample_observed_time_series(batch)
+time_series = trainer.time_series_model.generate_time_series_from_batch(batch)
 
 untrained_trainer = AnnealingTrainer.get_trainer_from_run_id_config(run_id)
-untrained_time_series =untrained_trainer.time_series_model.sample_observed_time_series(batch)
+untrained_time_series =untrained_trainer.time_series_model.generate_time_series_from_batch(batch)
 
 
 roi  = 17

@@ -23,12 +23,12 @@ def get_mini_batch_mask(mini_batch, seq_lengths):
     return mask
 
 def collate_fn(data: list[torch.Tensor]):
-    data.sort(key =len,reverse=True)
+    #data.sort(key =len,reverse=True)
     reversed_data = [x.flip(0) for x in data]
     seq_lengths = [len(x) for x in reversed_data]
     padded_sequence = pad_sequence(data,batch_first=True)
     padded_reversed_sequence = pad_sequence(reversed_data,batch_first=True)
-    packed_reversed_sequence = pack_padded_sequence(padded_reversed_sequence,seq_lengths,batch_first=True)
+    packed_reversed_sequence = pack_padded_sequence(padded_reversed_sequence,seq_lengths,batch_first=True, enforce_sorted=False)
     batch_mask = get_mini_batch_mask(padded_sequence,seq_lengths)
 
     return padded_sequence, packed_reversed_sequence, batch_mask, torch.tensor(seq_lengths)

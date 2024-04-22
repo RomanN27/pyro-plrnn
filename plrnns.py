@@ -75,7 +75,7 @@ class ConstantCovariance(nn.Module):
         super().__init__()
         self.Sigma = nn.Parameter(torch.ones(z_dim))
     def forward(self,z):
-        return self.Sigma.expand(len(z), *self.Sigma.shape) ** 2
+        return self.Sigma ** 2
 
 class LinearCovariance(nn.Module):
     def __init__(self,z_dim):

@@ -17,18 +17,19 @@ class Forecaster:
         self.model = model
         self.guide = guide
 
-    def __call__(self, batch: TensorIterable, t: int, n_samples: int, probabilistic: bool = True, truncate_batch: bool = False) -> torch.Tensor:
+    def __call__(self, batch: TensorIterable, t: int, n_samples: int, probabilistic: bool = True, truncate_batch: bool = False) -> TensorIterable:
         #in case the time series in batch contain the values that should be predicted
         if truncate_batch:
             batch  = [ts[:-t] for ts in batch]
-
+        lengths = [len(b) for b in batch]
         guide_trace = self.get_guide_trace(batch, n_samples)
         posterior_model_trace = self.run_model_over_posterior_distribution(batch, guide_trace, t, n_samples)
 
-        predictive_tensor = self.process_trace(posterior_model_trace)
+        predictive_tensor = self.process_trace(posterior_model_trace,lengths)
+        #predictive tensor shape: n_samples * n_batches * n_time_steps * n_dim
 
         if not probabilistic:
-            predictive_tensor = predictive_tensor.mean(0)
+            predictive_tensor = [t.mean(0) for t in predictive_tensor]
 
         return predictive_tensor
 
@@ -37,7 +38,7 @@ class Forecaster:
     def get_guide_trace(self, batch: TensorIterable, n_samples: int) -> Trace:
         traced_guide = trace(self.guide)
 
-        with plate("_num_predictive_samples", n_samples):
+        with plate("_num_predictive_samples", n_samples,dim=-2):
             traced_guide(batch)
 
         return traced_guide.trace
@@ -49,7 +50,7 @@ class Forecaster:
         time_range = range(t_0, t_0 + t)
 
         with trace() as tracer:
-            with plate("_num_predictive_samples", n_samples):
+            with plate("_num_predictive_samples", n_samples,dim=-2):
                 z_h = posterior_model(batch)
                 with scope(prefix=self.PRED_PREFIX):
                     self.model.run_over_time_range(z_h, time_range)
@@ -60,7 +61,9 @@ class Forecaster:
     def get_values_from_nodes(nodes: list[Message]) -> TensorIterable:
         return [node["value"] for node in nodes]
 
-    def process_trace(self, posterior_model_trace: Trace) -> torch.Tensor:
+    def process_trace(self, posterior_model_trace: Trace, lengths:list[int]) -> TensorIterable:
+        #TODO findout why the batch is processed apparently in wrong order
+
         inputed_observed_nodes = [posterior_model_trace.nodes[obs_node] for obs_node in
                                   posterior_model_trace.observation_nodes]
         inputed_observed_values = self.get_values_from_nodes(inputed_observed_nodes)
@@ -72,10 +75,12 @@ class Forecaster:
                       is_pred_node(node)]
         pred_values = self.get_values_from_nodes(pred_nodes)
         pred_values = torch.stack(pred_values)
-        pred_values = pred_values.transpose(0, -2)
+        pred_values = pred_values.swapaxes(0,1).swapaxes(1,2)
         n_mc_samples = pred_values.size(0)
         inputed_observed_values = inputed_observed_values.unsqueeze(0).expand(n_mc_samples, -1, -1, -1)
 
-        all_values = torch.cat([inputed_observed_values, pred_values], dim=-2)
+        actually_observed_list = [b[:,:l] for b,l in zip(inputed_observed_values.swapaxes(0,1), lengths)]
+
+        all_values = [torch.cat([actual_batch, predicted_batch ], dim =-2) for actual_batch, predicted_batch in zip(actually_observed_list,pred_values.swapaxes(0,1) )]
 
         return all_values
