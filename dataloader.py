@@ -9,7 +9,8 @@ from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 import os
 import numpy as np
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
+from lightning import LightningDataModule
 
 INDICATE_PATH: Optional[Path] = Path(os.environ.get("INDICATE_PATH")) if os.environ.get("INDICATE_PATH") else None
 
@@ -43,9 +44,9 @@ def get_indicate_data() -> torch.Tensor:
 
 
 class IndicateDataSet(Dataset):
-
+    #TODO Use Jagged Tensors instead of list of tensors
     @classmethod
-    def from_path(cls, path: Path = INDICATE_PATH):
+    def from_path(cls, path: Path|str = INDICATE_PATH):
         tensors = cls.get_indicate_data_tensors(path)
         return cls(tensors)
 
@@ -109,7 +110,6 @@ def ts_train_test_split(data: IndicateDataSet, n_test_time_steps: int | list[int
     return datasets
 
 
-
 class IndicateDataLoader(DataLoader):
 
     def __init__(self, *args, **kwargs):
@@ -118,6 +118,37 @@ class IndicateDataLoader(DataLoader):
     @staticmethod
     def collate_fn(data: list[torch.Tensor]):
         return data
+
+
+class IndicateDataModule(LightningDataModule):
+    def __init__(self, batch_size: Optional[int] = None, subject_index: Optional[bool] = None, test_steps: int = 20,
+                 val_steps: int = 20, data_dir: str = INDICATE_PATH):
+        super().__init__()
+        assert (batch_size is None) != (subject_index is None)
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+        self.subject_index = subject_index
+        self.test_steps = test_steps
+        self.val_steps = val_steps
+
+    def setup(self, stage: str) -> None:
+        if self.subject_index is not None:
+            self.train, self.test, self.val = get_data_loaders_of_one_subject(self.subject_index, self.test_steps,
+                                                                              self.val_steps)
+        else:
+            indicate_data = IndicateDataSet.from_path(self.data_dir)
+            data_sets = ts_train_test_split(indicate_data,[self.test_steps, self.val_steps])
+            self.train, self.test, self.val = [IndicateDataLoader(dataset=ds,batch_size=self.batch_size) for ds in data_sets]
+
+
+    def train_dataloader(self):
+        return self.train
+
+    def val_dataloader(self):
+        return self.val
+
+    def test_dataloader(self):
+        return self.test
 
 
 def get_data():
@@ -131,18 +162,24 @@ def get_data():
     return train, test, val
 
 
-def get_data_of_one_subject(subject_index: int, test_steps: int = 20, val_steps: int = 20):
-    path = INDICATE_PATH
-    indicate_data = IndicateDataSet.from_path(path)
-    indicate_data_set = IndicateDataSet([indicate_data[subject_index]])
-
-    train, test, val = ts_train_test_split(indicate_data_set, [test_steps, val_steps])
+def get_data_loaders_of_one_subject(subject_index: int, test_steps: int = 20, val_steps: int = 20) -> Tuple[
+    DataLoader, DataLoader, DataLoader]:
+    test, train, val = get_data_sets_of_one_subject(subject_index, test_steps, val_steps)
 
     train = IndicateDataLoader(train, batch_size=1, shuffle=True)
     test = IndicateDataLoader(test, batch_size=1, shuffle=True)
     val = IndicateDataLoader(val, batch_size=1, shuffle=True)
 
     return train, test, val
+
+
+def get_data_sets_of_one_subject(subject_index: int, test_steps: int, val_steps: int) -> Tuple[
+    Dataset, Dataset, Dataset]:
+    path = INDICATE_PATH
+    indicate_data = IndicateDataSet.from_path(path)
+    indicate_data_set = IndicateDataSet([indicate_data[subject_index]])
+    train, test, val = ts_train_test_split(indicate_data_set, [test_steps, val_steps])
+    return test, train, val
 
 
 def get_fake_data_loader(n_rois=5, T=1000, n=1):
@@ -165,5 +202,5 @@ class FakeDataSet(Dataset):
 
 
 if __name__ == "__main__":
-    train, test, val = get_data_of_one_subject(1)
+    train, test, val = get_data_loaders_of_one_subject(1)
     train, test, val = get_data()

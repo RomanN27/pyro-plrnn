@@ -1,57 +1,68 @@
 import logging
 import os
+import re
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, TypeVar, Any
 
+import mlflow
+import torch
+import torch.nn as nn
 import tqdm
 from hydra.utils import instantiate
-from pyro.poutine import scale, block
-from torch.utils.data import Dataset, Sampler, RandomSampler
-from typing import Callable, Optional
+from lightning.pytorch.utilities.types import OptimizerLRScheduler, STEP_OUTPUT
+from lightning.pytorch import Trainer
+
+from pyro.infer import Predictive, Trace_ELBO
 from pyro.optim import PyroOptim
-from pyro.infer import ELBO, SVI, Predictive
-from dataclasses import dataclass
+from pyro.poutine import scale, block
+from torch.utils.data import Dataset
 from tqdm import tqdm
-import mlflow
-import re
-import torch.nn as nn
+
 from time_series_model import TimeSeriesModel
-from typing import TYPE_CHECKING, TypeVar
-from selective_scale_messenger import SelectiveScaleMessenger
-import torch
+
 if TYPE_CHECKING:
     from pyro.poutine.runtime import Message
 from omegaconf import DictConfig
-from abc import ABC, abstractmethod
 from pathlib import Path
 from omegaconf import OmegaConf
 from evaluation.metrics import PyroTimeSeriesMetricCollection
+from lightning.pytorch import LightningModule
+from custom_typehint import TensorIterable
+from torch import Tensor
+from evaluation.metrics import  PyroTimeSeriesMetricCollection
+from forecaster import Forecaster
 @dataclass
 class TrainingConfig:
     annealing_factor: float = 1.0
     annealing_epochs: int = 3
 
 
-T = TypeVar("T", bound="Trainer")
+T = TypeVar("T", bound="TimeSeriesModule")
 
 
-class Trainer(ABC):
-    ML_FLOW_ARTIFACTS_SAVING_PATH = "mlartifacts"
+class TimeSeriesModule(LightningModule):
     def __init__(self, time_series_model: TimeSeriesModel, variational_distribution: nn.Module,
-                 data_loader: Dataset, optimizer: PyroOptim, elbo: ELBO):
+                 data_loader: Dataset, optimizer: PyroOptim, elbo: Trace_ELBO, metric_collection: PyroTimeSeriesMetricCollection):
+        super().__init__()
         self.time_series_model = time_series_model
         self.variational_distribution = variational_distribution
         self.data_loader = data_loader
         self.optimizer = optimizer
         self.elbo = elbo
+        self.predictive = Predictive(self.time_series_model, guide = self.variational_distribution,num_samples=1)
+        self.metric_collection = metric_collection
+        self.forecaster = Forecaster(self.time_series_model, self.variational_distribution)
 
-        self.svi = SVI(self.time_series_model, variational_distribution, self.optimizer, loss=self.elbo)
+    def configure_optimizers(self):
+        #return self.optimizer
+        parameters = list(self.time_series_model.parameters()) + list(self.variational_distribution.parameters())
+        return torch.optim.Adam(parameters, lr=0.01)
 
-    @abstractmethod
-    def train(self,*args,**kwargs):
-        pass
 
     @classmethod
     def get_trainer_from_config(cls: type[T], cfg: DictConfig) -> T:
-        train, test, valid = instantiate(cfg.data)
+        #TODO Use Lightning CLI
+        data_module = instantiate(cfg.data)
         plrnn = instantiate(cfg.transition_model)
         observation_model = instantiate(cfg.observation_model)
         observation_distribution = instantiate(cfg.observation_distribution)
@@ -63,9 +74,14 @@ class Trainer(ABC):
         optimizer = optimizer_class(dict(cfg.optimizer.optim_args))
         guide = instantiate(cfg.guide)
         loss = instantiate(cfg.loss)
-        trainer = cls(time_series_model, guide, train, optimizer, loss)
+        trainer = cls(**cfg.module,time_series_model = time_series_model,variational_distribution= guide,
+                      data_loader = data_module, optimizer=optimizer, elbo= loss,metric_collection = metric_collection)
         return trainer
 
+    def validation_step(self, batch: TensorIterable) -> None:
+        self.metric_collection.update(self.forecaster,batch)
+        results = self.metric_collection.compute()
+        self.logger.log_metrics(results)
 
     @classmethod
     def get_config_from_run_id(cls: type[T], run_id: str) -> DictConfig:
@@ -114,7 +130,24 @@ class Trainer(ABC):
 
 
 
-class AnnealingTrainer(Trainer):
+class AnnealingModule(TimeSeriesModule):
+
+
+    def __init__(self, beginning_annealing_factor: int, annealing_epochs: int, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._current_annealing_factor = beginning_annealing_factor
+        self.delta = (1 - beginning_annealing_factor) / annealing_epochs
+
+    @property
+    def current_annealing_factor(self):
+        return self._current_annealing_factor
+
+    @current_annealing_factor.setter
+    def current_annealing_factor(self,value):
+        #clip annealing factor to allowed range in [0,1]
+        self._current_annealing_factor = max(min(1, value),0)
+    def increase_annealing_factor(self):
+        self.current_annealing_factor += self.delta
 
     def annealing_selector(self, msg: "Message") -> bool:
         z_name = self.time_series_model.HIDDEN_VARIABLE_NAME
@@ -124,31 +157,16 @@ class AnnealingTrainer(Trainer):
 
     def annealing_hider(self,msg: "Message") -> bool:
         return not self.annealing_selector(msg)
-    def train(self, n_epochs: int, annealing_factor: int, annealing_epochs: int):
+    def training_step(self, batch: TensorIterable):
 
-        step = 0
-        min_loss = None
-        last_epoch_loss = 0
+        with scale(scale = self.current_annealing_factor):
+            with block(hide_fn=self.annealing_hider):
+                    loss = self.elbo.differentiable_loss(self.time_series_model,self.variational_distribution, batch)
 
-        for epoch in (tbar := tqdm(range(n_epochs))):
-            epoch_loss = 0.0
-            annealing_factor = self.get_annealing_factor(annealing_epochs, epoch, annealing_factor)
+        self.logger.experiment.log_metric("loss", f"{loss / 10000:2f}", step=self.global_step)
+    def on_train_epoch_end(self) -> None:
+        self.increase_annealing_factor()
 
-            with scale(scale = annealing_factor):
-                with block(hide_fn=self.annealing_hider):
-                    for batch in self.data_loader:
-                        loss = self.svi.step(batch)
-                        dict_ = {"last_epoch_loss": last_epoch_loss, "batch_loss": loss, "min_loss": min_loss}
-                        tbar.set_postfix(dict_)
-                        epoch_loss += loss
-                        if epoch > 5:
-                            mlflow.log_metric(ö)
 
-                        step += 1
-                        last_epoch_loss = epoch_loss
-            min_loss = min(min_loss, epoch_loss) if min_loss else epoch_loss
 
-    def get_annealing_factor(self, annealing_epochs, epoch, min_af) -> float:
-        annealing_factor = min_af + (1 - min_af) * min(1, epoch / annealing_epochs)
-        return annealing_factor
 
