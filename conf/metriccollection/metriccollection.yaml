@@ -1,6 +1,6 @@
 defaults:
   - metrics:
-    - klx
+    - mmd
     - pse
     - nstepmse
 

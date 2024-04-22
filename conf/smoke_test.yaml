@@ -1,11 +1,13 @@
 defaults:
-  - config
+  - default_config
   - _self_
-  - override data: data
   #- override guide: normal_auto_guide
 
-z_dim: 1
+z_dim: 2
 
 training:
   n_epochs: 1
   annealing_factor: 1
+data:
+  subject_index: null
+  batch_size: 12

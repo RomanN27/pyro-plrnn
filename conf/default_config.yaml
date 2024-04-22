@@ -1,6 +1,7 @@
 defaults:
   - _self_
-  - data: data
+  - data: data_module
+  - module: annealing_module
   - guide: rnn
   - loss: loss
   - observation_model: linear

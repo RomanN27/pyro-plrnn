@@ -1,5 +1,4 @@
 run_id: 30e6d382849a43d0a48efc3b004f2544
 training:
-  annealing_factor: 1.
   n_epochs:
     1

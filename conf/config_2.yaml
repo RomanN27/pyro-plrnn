@@ -2,7 +2,7 @@ defaults:
   - default_config
   - _self_
   - override transition_model: shallowPLRNN
-  - override data: data
+
 
 
 
@@ -24,3 +24,6 @@ transition_model:
     _target_: plrnns.LinearCovariance
 loss:
   num_particles: 1
+data:
+  subject_index: null
+  batch_size: 12
