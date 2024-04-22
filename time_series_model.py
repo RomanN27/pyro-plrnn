@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import pyro
-import pyro.distributions as dist
+from pyro.distributions import Delta
 from typing import Type, Callable, Tuple
 
 from utils import collate_fn_2
@@ -33,6 +33,7 @@ class TimeSeriesModel(nn.Module):
         self.observation_distribution = observation_distribution
         self.collate_fn = collate_fn
         self.z_0 = nn.Parameter(torch.zeros(self.transition_model.z_dim))
+
     
     @staticmethod
     def get_mask(t, batch_mask = None) -> Optional[torch.Tensor]:
@@ -49,7 +50,7 @@ class TimeSeriesModel(nn.Module):
     @staticmethod
     def get_distribution_instance(distribution: Type["TorchDistributionMixin"], mask=None, *distribution_parameters: torch.Tensor) -> "TorchDistributionMixin":
         distribution_instance = distribution(*distribution_parameters)
-        if mask:
+        if mask is not None:
             distribution_instance = distribution_instance.mask(mask)
         
         return distribution_instance
@@ -79,20 +80,22 @@ class TimeSeriesModel(nn.Module):
     def run_over_time_range(self, z_prev: torch.Tensor, time_range: Iterable[int],
                             batch_mask: Optional[torch.Tensor] = None,
                             padded_sequence: Optional[torch.Tensor] = None) -> torch.Tensor:
-        n_batches = len(batch_mask)
-        with pyro.plate("z_minibatch", n_batches):
-            for t in pyro.markov(time_range):
-                z_prev = self.run_step(t, z_prev, padded_sequence, batch_mask)
+
+
+        for t in pyro.markov(time_range):
+            z_prev = self.run_step(t, z_prev, padded_sequence, batch_mask)
+
         return z_prev
 
     def run_step(self, t: int, z_prev: torch.Tensor, padded_sequence: Optional[torch.Tensor] = None, batch_mask: Optional[torch.Tensor] = None):
-        z_t = self.sample_next_hidden_state(t, batch_mask, *self.transition_model(z_prev))
+        distribution_parametrs = self.transition_model(z_prev)
+        z_t = self.sample_next_hidden_state(t, batch_mask, *distribution_parametrs)
 
         self.sample_observation(t, padded_sequence, batch_mask, *self.observation_model(z_t))
 
         return z_t
 
-    def sample_observed_time_series(self, batch):
+    def generate_time_series_from_batch(self, batch):
         unconditioned_model = trace(uncondition(self))
         # batch doesnt matter, only for shape infering
 
@@ -104,3 +107,4 @@ class TimeSeriesModel(nn.Module):
         values = [x["value"] for x in obs_nodes.values()]
         time_series = torch.stack(values, 1)
         return time_series
+
