@@ -1,4 +1,4 @@
 klx:
-  _target_: evaluation.metrics.KLDivergenceObservedSpace
+  _target_: src.metrics.metrics.KLDivergenceObservedSpace
   n_bins: 30
   smoothing_alpha: 10e-6

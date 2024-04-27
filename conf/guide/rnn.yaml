@@ -1,4 +1,4 @@
-_target_: guides.RNNGuide
+_target_: src.models.guides.RNNGuide
 rnn:
   _target_: torch.nn.RNN
   input_size: ${obs_dim}
@@ -9,7 +9,7 @@ rnn:
   num_layers: 1
   dropout: 0
 combiner:
-  _target_: plrnns.Combiner
+  _target_: src.models.guides.Combiner
   z_dim: ${z_dim}
   rnn_dim: ${guide.rnn.hidden_size}
 dist:

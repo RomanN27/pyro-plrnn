@@ -1,0 +1,24 @@
+defaults:
+  - default_config
+  - _self_
+  - override observation_model: multi_modal
+  - override loss: force_elbo
+  - override observation_distribution: product_distribution
+
+
+observation_model:
+  sub_models:
+    multinomial_link:
+      obs_dim: 3
+    poisson_link:
+      obs_dim: 2
+    normal_link:
+      obs_dim: 4
+
+loss:
+  forcing_interval: 20
+
+
+hydra:
+  searchpath:
+    - file://C:\Users\roman.nefedov\PycharmProjects\PLRNN_Family_Variational_Inference\conf

@@ -1,9 +1,9 @@
 defaults:
   - connectivity_module: ShallowConnector
 
-_target_: plrnns.PLRNN
+_target_: src.models.transition_models.PLRNN
 z_dim: ${z_dim}
 
 cov_module:
-  _target_: plrnns.ConstantCovariance
+  _target_: src.models.transition_models.ConstantCovariance
   z_dim: ${z_dim}

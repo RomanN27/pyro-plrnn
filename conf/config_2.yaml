@@ -4,8 +4,6 @@ defaults:
   - override transition_model: shallowPLRNN
 
 
-
-
 z_dim: 30
 obs_dim: 19
 training:
@@ -21,7 +19,7 @@ transition_model:
   connectivity_module:
     hidden_dim: 10
   cov_module:
-    _target_: plrnns.LinearCovariance
+    _target_: src.models.transition_models.LinearCovariance
 loss:
   num_particles: 1
 data:

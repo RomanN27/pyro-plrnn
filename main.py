@@ -1,9 +1,8 @@
-from lightning_trainer import AnnealingModule, TimeSeriesModule
+from src.lightning_modules import AnnealingModule, TimeSeriesModule
 import hydra
 from lightning.pytorch.loggers import MLFlowLogger
 
 from omegaconf import DictConfig, OmegaConf
-import torch
 import mlflow
 from torchinfo import summary
 from lightning.pytorch import Trainer as LightningTrainer
@@ -19,7 +18,7 @@ def main(cfg: DictConfig):
 
     data_module = trainer.data_loader
 
-    lightning_trainer = LightningTrainer(logger=mlflow_logger)
+    lightning_trainer = LightningTrainer(logger=mlflow_logger,num_sanity_val_steps=0)
     lightning_trainer.fit(trainer,datamodule=data_module)
 
 

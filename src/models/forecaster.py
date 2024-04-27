@@ -1,9 +1,9 @@
-from time_series_model import TimeSeriesModel
+from src.models.time_series_model import TimeSeriesModel
 from pyro.poutine import trace, replay
 from pyro import plate
 from typing import Callable
 import torch
-from custom_typehint import TensorIterable
+from src.utils.custom_typehint import TensorIterable
 from pyro.poutine import Trace
 from pyro.contrib.autoname import scope
 from pyro.poutine.runtime import Message

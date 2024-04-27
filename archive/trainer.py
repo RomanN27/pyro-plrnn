@@ -4,18 +4,16 @@ import os
 import tqdm
 from hydra.utils import instantiate
 from pyro.poutine import scale, block
-from torch.utils.data import Dataset, Sampler, RandomSampler
-from typing import Callable, Optional
+from torch.utils.data import Dataset
 from pyro.optim import PyroOptim
-from pyro.infer import ELBO, SVI, Predictive
+from pyro.infer import ELBO, SVI
 from dataclasses import dataclass
 from tqdm import tqdm
 import mlflow
 import re
 import torch.nn as nn
-from time_series_model import TimeSeriesModel
+from src.models.time_series_model import TimeSeriesModel
 from typing import TYPE_CHECKING, TypeVar
-from selective_scale_messenger import SelectiveScaleMessenger
 import torch
 if TYPE_CHECKING:
     from pyro.poutine.runtime import Message
@@ -23,7 +21,7 @@ from omegaconf import DictConfig
 from abc import ABC, abstractmethod
 from pathlib import Path
 from omegaconf import OmegaConf
-from evaluation.metrics import PyroTimeSeriesMetricCollection
+from src.metrics.metrics import PyroTimeSeriesMetricCollection
 @dataclass
 class TrainingConfig:
     annealing_factor: float = 1.0
@@ -34,7 +32,7 @@ T = TypeVar("T", bound="Trainer")
 
 
 class Trainer(ABC):
-    ML_FLOW_ARTIFACTS_SAVING_PATH = "mlartifacts"
+    ML_FLOW_ARTIFACTS_SAVING_PATH = "../mlartifacts"
     def __init__(self, time_series_model: TimeSeriesModel, variational_distribution: nn.Module,
                  data_loader: Dataset, optimizer: PyroOptim, elbo: ELBO):
         self.time_series_model = time_series_model

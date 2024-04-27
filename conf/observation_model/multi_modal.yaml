@@ -1,0 +1,7 @@
+defaults:
+  - sub_models:
+    - multinomial_link
+    - poisson_link
+    - normal_link
+
+_target_: src.models.observation_models.ListConcat

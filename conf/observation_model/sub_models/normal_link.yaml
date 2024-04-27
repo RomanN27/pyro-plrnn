@@ -1,0 +1,4 @@
+normal_link:
+  _target_: src.models.observation_models.LinearObservationModel
+  obs_dim: ${obs_dim}
+  z_dim: ${z_dim}

@@ -1,4 +1,4 @@
-_target_: dataloader.get_fake_data_loader
+_target_: src.datadataloader.get_fake_data_loader
 n_rois: 19
 n: 1
 T: 512

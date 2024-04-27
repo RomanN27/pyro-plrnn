@@ -1,23 +1,14 @@
 import pyro
 import torch
-from pyro import poutine as poutine, distributions as dist
-from utils import pad_and_reverse
-from pyro.distributions.transforms import affine_autoregressive
+from src.utils.variable_time_series_length_utils import pad_and_reverse, collate_fn
 from torch import nn as nn
-from pyro.distributions import TransformedDistribution
-from plrnns import LinearObservationModel, PLRNN, Combiner
-from torch.utils.data import DataLoader
-from typing import Callable
-from pyro.optim import PyroOptim
-from pyro.infer import ELBO
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Type
 if TYPE_CHECKING:
     from pyro.distributions import TorchDistributionMixin
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from torch.utils.data import Dataset
-from utils import collate_fn
-from custom_typehint import TensorIterable
+
+from src.utils.custom_typehint import TensorIterable
 class Guide:
 
     @property
@@ -30,10 +21,46 @@ class Guide:
         batch = [self.data_set[ind] for ind in batch_indices]
         return self.___call__(batch)
 
+class Combiner(nn.Module):
+    """
+    Parameterizes `q(z_t | z_{t-1}, x_{t:T})`, which is the basic building block
+    of the guide (i.e. the variational distribution). The dependence on `x_{t:T}` is
+    through the hidden state of the RNN (see the PyTorch module `rnn` below)
+    """
+
+    def __init__(self, z_dim, rnn_dim):
+        super().__init__()
+        self.z_dim = z_dim
+        self.rnn_dim = rnn_dim
+        # initialize the three linear.yaml transformations used in the neural network
+        self.lin_z_to_hidden = nn.Linear(z_dim, rnn_dim)
+        self.lin_hidden_to_loc = nn.Linear(rnn_dim, z_dim)
+        self.lin_hidden_to_scale = nn.Linear(rnn_dim, z_dim)
+        # initialize the two non-linearities used in the neural network
+        self.tanh = nn.Tanh()
+        self.softplus = nn.ReLU()
+
+    def forward(self, z_t_1, h_rnn):
+        """
+        Given the latent z at at a particular time step t-1 as well as the hidden
+        state of the RNN `h(x_{t:T})` we return the mean and scale vectors that
+        parameterize the (diagonal) gaussian distribution `q(z_t | z_{t-1}, x_{t:T})`
+        """
+        # combine the rnn hidden state with a transformed version of z_t_1
+        h_combined = 0.5 * (self.tanh(self.lin_z_to_hidden(z_t_1)) + h_rnn)
+        # use the combined hidden state to compute the mean used to sample z_t
+        loc = self.lin_hidden_to_loc(h_combined)
+        # use the combined hidden state to compute the scale used to sample z_t
+        scale = self.softplus(self.lin_hidden_to_scale(h_combined))
+        # return loc, scale which can be fed into Normal
+        return loc, scale +0.01
+
+
+
 
 class RNNGuide(nn.Module):
 
-    def __init__(self, rnn:nn.RNN, combiner: Combiner, dist: "TorchDistributionMixin" ):
+    def __init__(self, rnn:nn.RNN, combiner: Combiner, dist: Type["TorchDistributionMixin"] ):
         super().__init__()
         self.rnn = rnn
         self.combiner = combiner
@@ -74,10 +101,11 @@ class RNNGuide(nn.Module):
 
             masked_distribution = z_dist.mask(batch_mask[:, t - 1:t])
             z_t = pyro.sample(
-                "z_%d" % t, masked_distribution.to_event(1)
+                "z_%d" % t, masked_distribution.to_event(2)
             )
 
             # the latent sampled at this time step will be conditioned upon in the next time step
             # so keep track of it
             z_prev = z_t
+
 

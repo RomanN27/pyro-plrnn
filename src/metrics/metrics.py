@@ -1,15 +1,15 @@
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 import torch
-from custom_typehint import TensorIterable
+from src.utils.custom_typehint import TensorIterable
 import random
 from torch import Tensor
 from torchmetrics import MeanSquaredError, Metric, MetricCollection
-from evaluation.pse import  get_average_spectrum
+from src.metrics.pse import  get_average_spectrum
 import numpy as np
-from evaluation.klx import klx_metric
+from src.metrics.klx import klx_metric
 if TYPE_CHECKING:
-    from time_series_model import TimeSeriesModel
-from forecaster import Forecaster
+    pass
+from src.models.forecaster import Forecaster
 
 class NStepMeanSquaredError(MeanSquaredError):
 
@@ -52,10 +52,10 @@ class GaussianMaximumMeanDiscrepancy(Metric):
         self.diff_scalar_product.extend(diff_scalar_products)
 
     def get_scalar_diff(self, X, Y):
-        XX = X @ X.T
-        YY = Y @ Y.T
+        XX = (X**2).sum(1)
+        YY = (Y**2).sum(1)
         XY = X @ Y.T
-        diff_scalar_product = XX - 2 * XY + YY
+        diff_scalar_product = XX.reshape(-1,1) - 2 * XY.T + YY.reshape(1,-1)
         return diff_scalar_product
 
     def sample_pad(self, x_true):
@@ -109,7 +109,7 @@ class PowerSpectrumCorrelation(Metric):
         x_gen = [x[:len(y)] for x,y in zip(x_gen,x_true)]
         dim_x = x_gen[0].shape[-1]
 
-        self.dim_x = dim_x
+        self.dim_x = torch.tensor(dim_x)
 
         for dim in range(dim_x):
             for x,y in zip(x_gen, x_true):

@@ -1,13 +1,13 @@
 import torch
 import torch.nn as nn
 import pyro
-from pyro.distributions import Delta
-from typing import Type, Callable, Tuple
+from typing import Type, Callable
 
-from utils import collate_fn_2
+from src.utils.variable_time_series_length_utils import collate_fn_2
 from pyro.poutine import trace, uncondition
 from typing import TypeVar, TYPE_CHECKING, Iterable, Optional
-from custom_typehint import TensorIterable
+from src.utils.custom_typehint import TensorIterable
+
 if TYPE_CHECKING:
     from pyro.distributions import TorchDistributionMixin
 
@@ -44,7 +44,7 @@ class TimeSeriesModel(nn.Module):
             
         observation_name = f"{self.OBSERVED_VARIABLE_NAME}_{t}"
         obs_t = batch[:, t - 1, :] if batch is not None else None
-        obs_t = pyro.sample(observation_name, distribution_instance.to_event(1), obs=obs_t)
+        obs_t = pyro.sample(observation_name, distribution_instance.to_event(2), obs=obs_t)
         return obs_t
     
     @staticmethod
@@ -58,9 +58,9 @@ class TimeSeriesModel(nn.Module):
     def sample_next_hidden_state(self, t: int, batch_mask: Optional[torch.Tensor] =None, *distribution_parameters: torch.Tensor) -> torch.Tensor:
         hidden_state_name = f"{self.HIDDEN_VARIABLE_NAME}_{t}"
         mask = self.get_mask(t,batch_mask)
-        distribution_instance = self.get_distribution_instance(self.observation_distribution, mask, *distribution_parameters)
+        distribution_instance = self.get_distribution_instance(self.transition_distribution, mask, *distribution_parameters)
         
-        z_t = pyro.sample(hidden_state_name, distribution_instance.to_event(1))
+        z_t = pyro.sample(hidden_state_name, distribution_instance.to_event(2))
         return z_t
 
     def __call__(self, batch: TensorIterable)-> torch.Tensor:
@@ -88,10 +88,11 @@ class TimeSeriesModel(nn.Module):
         return z_prev
 
     def run_step(self, t: int, z_prev: torch.Tensor, padded_sequence: Optional[torch.Tensor] = None, batch_mask: Optional[torch.Tensor] = None):
-        distribution_parametrs = self.transition_model(z_prev)
-        z_t = self.sample_next_hidden_state(t, batch_mask, *distribution_parametrs)
+        distribution_parameters = self.transition_model(z_prev)
+        z_t = self.sample_next_hidden_state(t, batch_mask, *distribution_parameters)
 
-        self.sample_observation(t, padded_sequence, batch_mask, *self.observation_model(z_t))
+        observation_distribution_parameters = self.observation_model(z_t)
+        self.sample_observation(t, padded_sequence, batch_mask, *observation_distribution_parameters)
 
         return z_t
 

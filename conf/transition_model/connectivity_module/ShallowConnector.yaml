@@ -1,3 +1,3 @@
-_target_: plrnns.ShallowConnector
+_target_: src.models.transition_models.ShallowConnector
 z_dim: ${z_dim}
 hidden_dim: 40

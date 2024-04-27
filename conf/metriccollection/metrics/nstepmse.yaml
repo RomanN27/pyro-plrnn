@@ -1,4 +1,4 @@
 nstepmse:
-  _target_: evaluation.metrics.NStepMeanSquaredError
+  _target_: src.metrics.metrics.NStepMeanSquaredError
   n_steps: 20
   n_samples: 1000

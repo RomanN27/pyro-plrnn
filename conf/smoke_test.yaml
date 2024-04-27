@@ -1,13 +1,10 @@
 defaults:
   - default_config
   - _self_
-  #- override guide: normal_auto_guide
+  - override loss: force_elbo
 
 z_dim: 2
 
 training:
   n_epochs: 1
   annealing_factor: 1
-data:
-  subject_index: null
-  batch_size: 12

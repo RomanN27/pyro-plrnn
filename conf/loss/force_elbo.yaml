@@ -1,0 +1,2 @@
+_target_: src.training.losses.TeacherForcingTraceELBO
+forcing_interval: 30

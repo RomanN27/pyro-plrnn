@@ -1,0 +1,3 @@
+multinomial:
+  _target_: hydra.utils.get_method
+  path: src.utils.multi_modal_distribution.Multinomial1

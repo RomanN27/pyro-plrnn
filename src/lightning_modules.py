@@ -2,39 +2,30 @@ import logging
 import os
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypeVar, Any
+from typing import TYPE_CHECKING, TypeVar
 
 import mlflow
 import torch
 import torch.nn as nn
-import tqdm
 from hydra.utils import instantiate
-from lightning.pytorch.utilities.types import OptimizerLRScheduler, STEP_OUTPUT
-from lightning.pytorch import Trainer
 
 from pyro.infer import Predictive, Trace_ELBO
 from pyro.optim import PyroOptim
 from pyro.poutine import scale, block
 from torch.utils.data import Dataset
-from tqdm import tqdm
 
-from time_series_model import TimeSeriesModel
+from src.models.time_series_model import TimeSeriesModel
 
 if TYPE_CHECKING:
     from pyro.poutine.runtime import Message
 from omegaconf import DictConfig
 from pathlib import Path
 from omegaconf import OmegaConf
-from evaluation.metrics import PyroTimeSeriesMetricCollection
 from lightning.pytorch import LightningModule
-from custom_typehint import TensorIterable
-from torch import Tensor
-from evaluation.metrics import  PyroTimeSeriesMetricCollection
-from forecaster import Forecaster
-@dataclass
-class TrainingConfig:
-    annealing_factor: float = 1.0
-    annealing_epochs: int = 3
+from src.utils.custom_typehint import TensorIterable
+from pyro.poutine import trace, replay
+from src.metrics.metrics import  PyroTimeSeriesMetricCollection
+from src.models.forecaster import Forecaster
 
 
 T = TypeVar("T", bound="TimeSeriesModule")
@@ -81,7 +72,9 @@ class TimeSeriesModule(LightningModule):
     def validation_step(self, batch: TensorIterable) -> None:
         self.metric_collection.update(self.forecaster,batch)
         results = self.metric_collection.compute()
-        self.logger.log_metrics(results)
+        results = {k:v.numpy() for k,v in results.items()}
+        #self.logger.log_metrics(results)
+        self.metric_collection.reset()
 
     @classmethod
     def get_config_from_run_id(cls: type[T], run_id: str) -> DictConfig:
@@ -163,10 +156,23 @@ class AnnealingModule(TimeSeriesModule):
             with block(hide_fn=self.annealing_hider):
                     loss = self.elbo.differentiable_loss(self.time_series_model,self.variational_distribution, batch)
 
-        self.logger.experiment.log_metric("loss", f"{loss / 10000:2f}", step=self.global_step)
+        self.logger.experiment.log_metric(self.logger.run_id,key ="loss",value =  loss, step=self.global_step)
     def on_train_epoch_end(self) -> None:
         self.increase_annealing_factor()
 
 
 
+
+class GeneralTeacherForcingModule(TimeSeriesModule):
+
+    def __init__(self):
+        pass
+
+    def training_step(self, batch: TensorIterable):
+        guide_trace = trace(self.variational_distribution).get_trace(batch)
+        model_trace = trace(replay(self.time_series_model, trace=guide_trace)
+        ).get_trace(batch)
+
+        model_trace.compute_log_prob()
+        guide_trace.compute_score_parts()
 
