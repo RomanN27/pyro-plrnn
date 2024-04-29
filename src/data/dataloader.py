@@ -26,6 +26,24 @@ def create_fake_mrt_data(n_rois, T, n):
             data[i] = rnn(data[i].unsqueeze(1))[0].squeeze(1)
     return data, data, data
 
+def get_fake_categorical_data(mrt_data:list[torch.Tensor],n_categories: int,n_samples:int):
+    lengths = [len(d) for d in mrt_data]
+    fake_categorical_data = []
+    for i in range(len(mrt_data)):
+        randint = torch.randint(0, n_categories, (lengths[i], n_samples))
+        fake_categorical_data.append(randint)
+
+
+    return fake_categorical_data
+
+def get_fake_count_data(mrt_data:list[torch.Tensor],intensity:float,n_samples):
+
+    fake_count_data = [torch.poisson(torch.ones(len(ten), n_samples)*intensity) for ten in mrt_data]
+
+    return fake_count_data
+
+
+
 
 def get_indicate_data() -> torch.Tensor:
     path = INDICATE_PATH
@@ -42,6 +60,17 @@ def get_indicate_data() -> torch.Tensor:
     tensor = torch.stack(sub_tensors)
     return tensor
 
+class MultiModalDataSet(Dataset):
+    def __init__(self, tensors: list[torch.Tensor]):
+        self.tensors = tensors
+
+    def n_modalities(self):
+        return len(self.tensors[0])
+    def __len__(self):
+        return len(self.tensors)
+
+    def __getitem__(self, item):
+        return self.tensors[item]
 
 class IndicateDataSet(Dataset):
     #TODO Use Jagged Tensors instead of list of tensors
@@ -188,7 +217,56 @@ def get_fake_data_loader(n_rois=5, T=1000, n=1):
     dataloader = IndicateDataLoader(dataset, batch_size=1, shuffle=True)
     return dataloader, dataloader, dataloader
 
+def get_fake_multimodal_data_loader(n_rois=5, T=1000, n=1, n_categories=5, n_poisson=1, n_categorical=1):
+    data, _, _ = create_fake_mrt_data(n_rois, T, n)
+    categorical_data = get_fake_categorical_data(data, n_categories, n_categorical)
+    count_data = get_fake_count_data(data, 10, n_poisson)
+    multi_modal_data = [torch.cat([data, cat, count],-1) for data, cat, count in zip(data, categorical_data, count_data)]
+    dataset = MultiModalDataSet(multi_modal_data)
+    dataloader = IndicateDataLoader(dataset, batch_size=1, shuffle=True)
+    return dataloader, dataloader, dataloader
 
+class FakeMultiModalDataModule(LightningDataModule):
+
+        def __init__(self, n_rois=5, T=1000, n=1, n_categories=5, n_categorical=1, n_poisson=1):
+            super().__init__()
+            self.n_rois = n_rois
+            self.T = T
+            self.n = n
+            self.n_categories = n_categories
+            self.n_categorical = n_categorical
+            self.n_poisson = n_poisson
+
+        def setup(self, stage: str):
+            self.train, self.test, self.val = get_fake_multimodal_data_loader(self.n_rois, self.T, self.n, self.n_categories, self.n_poisson,self.n_categorical)
+
+        def train_dataloader(self):
+            return self.train
+
+        def val_dataloader(self):
+            return self.val
+
+        def test_dataloader(self):
+            return self.test
+class FakeDataModule(LightningDataModule):
+
+        def __init__(self, n_rois=5, T=1000, n=1):
+            super().__init__()
+            self.n_rois = n_rois
+            self.T = T
+            self.n = n
+
+        def setup(self, stage: str):
+            self.train, self.test, self.val = get_fake_data_loader(self.n_rois, self.T, self.n)
+
+        def train_dataloader(self):
+            return self.train
+
+        def val_dataloader(self):
+            return self.val
+
+        def test_dataloader(self):
+            return self.test
 class FakeDataSet(Dataset):
 
     def __init__(self, n_rois, T, n):

@@ -17,7 +17,7 @@ def pad_and_reverse(rnn_output, seq_lengths):
 
 
 def get_mini_batch_mask(mini_batch, seq_lengths):
-    mask = torch.zeros(mini_batch.shape[0:2])
+    mask = torch.zeros(mini_batch.shape[0:2]).to(mini_batch)
     for b in range(mini_batch.shape[0]):
         mask[b, 0: seq_lengths[b]] = torch.ones(seq_lengths[b])
     return mask

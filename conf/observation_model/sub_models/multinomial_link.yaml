@@ -2,3 +2,4 @@ multinomial_link:
   _target_: src.models.observation_models.MultionomialLink
   obs_dim: ${obs_dim}
   z_dim: ${z_dim}
+  n_categories: 4

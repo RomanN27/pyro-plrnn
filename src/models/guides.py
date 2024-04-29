@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from pyro.distributions import TorchDistributionMixin
 from abc import abstractmethod
 from torch.utils.data import Dataset
-
+from lightning import LightningModule
 from src.utils.custom_typehint import TensorIterable
 class Guide:
 
@@ -21,7 +21,7 @@ class Guide:
         batch = [self.data_set[ind] for ind in batch_indices]
         return self.___call__(batch)
 
-class Combiner(nn.Module):
+class Combiner(LightningModule):
     """
     Parameterizes `q(z_t | z_{t-1}, x_{t:T})`, which is the basic building block
     of the guide (i.e. the variational distribution). The dependence on `x_{t:T}` is
@@ -58,7 +58,7 @@ class Combiner(nn.Module):
 
 
 
-class RNNGuide(nn.Module):
+class RNNGuide(LightningModule):
 
     def __init__(self, rnn:nn.RNN, combiner: Combiner, dist: Type["TorchDistributionMixin"] ):
         super().__init__()
@@ -101,7 +101,7 @@ class RNNGuide(nn.Module):
 
             masked_distribution = z_dist.mask(batch_mask[:, t - 1:t])
             z_t = pyro.sample(
-                "z_%d" % t, masked_distribution.to_event(2)
+                "z_%d" % t, masked_distribution.to_event(1)
             )
 
             # the latent sampled at this time step will be conditioned upon in the next time step

@@ -2,9 +2,9 @@ import torch
 from torch import nn as nn
 
 from src.models.elementary_components import Diagonal, OffDiagonal
+from lightning import LightningModule
 
-
-class PLRNN(nn.Module):
+class PLRNN(LightningModule):
 
     def __init__(self,z_dim: int, connectivity_module: nn.Module, cov_module: nn.Module):
         super().__init__()
@@ -15,19 +15,21 @@ class PLRNN(nn.Module):
         self.cov_module = cov_module
 
     def forward(self,z):
-        loc = self.diag(z) + self.connectivity_module(z) + self.bias
+        loc = self.diag(z)
+        loc += self.connectivity_module(z)
+        loc += self.bias
         cov = self.cov_module(z)
         return loc, cov
 
 
-class ConstantCovariance(nn.Module):
+class ConstantCovariance(LightningModule):
     def __init__(self,z_dim):
         super().__init__()
         self.Sigma = nn.Parameter(torch.ones(z_dim))
     def forward(self,z):
         return self.Sigma ** 2
 
-class LinearCovariance(nn.Module):
+class LinearCovariance(LightningModule):
     def __init__(self,z_dim):
         super().__init__()
         self.Sigma = nn.Linear(z_dim, z_dim)
@@ -40,7 +42,7 @@ class LinearCovariance(nn.Module):
         cov = self.Sigma(z)
         return self.sigmoid(cov) * self.max_ + self.max_/10e5
 
-class OffDiagonalConnector(nn.Module):
+class OffDiagonalConnector(LightningModule):
 
     def __init__(self,z_dim,phi: nn.Module):
         super().__init__()
@@ -50,7 +52,7 @@ class OffDiagonalConnector(nn.Module):
     def forward(self,z):
         return  self.off_diag(self.phi(z))
 
-class DendriticPhi(nn.Module):
+class DendriticPhi(LightningModule):
     def __init__(self, z_dim: int, B: int):
         super().__init__()
         self.H  = nn.Parameter(torch.zeros(1,z_dim,B))
@@ -85,7 +87,7 @@ class ClippedDendriticConnector(OffDiagonalConnector):
 
 
 
-class ShallowConnector(nn.Module):
+class ShallowConnector(LightningModule):
     def __init__(self,z_dim,hidden_dim):
         super().__init__()
         self.sequential = nn.Sequential(nn.Linear(z_dim, hidden_dim), nn.ReLU(),nn.Linear(hidden_dim,z_dim, bias=False))

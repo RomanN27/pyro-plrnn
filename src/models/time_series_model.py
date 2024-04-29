@@ -7,7 +7,7 @@ from src.utils.variable_time_series_length_utils import collate_fn_2
 from pyro.poutine import trace, uncondition
 from typing import TypeVar, TYPE_CHECKING, Iterable, Optional
 from src.utils.custom_typehint import TensorIterable
-
+from lightning import LightningModule
 if TYPE_CHECKING:
     from pyro.distributions import TorchDistributionMixin
 
@@ -15,7 +15,7 @@ D_O = TypeVar("D_O", bound="TorchDistributionMixin")
 D_H = TypeVar("D_H", bound="TorchDistributionMixin")
 
 
-class TimeSeriesModel(nn.Module):
+class TimeSeriesModel(LightningModule):
     HIDDEN_VARIABLE_NAME = "z"
     OBSERVED_VARIABLE_NAME = "x"
 
@@ -37,14 +37,14 @@ class TimeSeriesModel(nn.Module):
     
     @staticmethod
     def get_mask(t, batch_mask = None) -> Optional[torch.Tensor]:
-        return batch_mask[:,t-1:t] if batch_mask is not None else batch_mask
+        return batch_mask[:,t-1] if batch_mask is not None else batch_mask
     def sample_observation(self, t, batch=None, batch_mask=None, *distribution_parameters):
         mask =  self.get_mask(t,batch_mask)
         distribution_instance = self.get_distribution_instance(self.observation_distribution, mask, *distribution_parameters)
             
         observation_name = f"{self.OBSERVED_VARIABLE_NAME}_{t}"
         obs_t = batch[:, t - 1, :] if batch is not None else None
-        obs_t = pyro.sample(observation_name, distribution_instance.to_event(2), obs=obs_t)
+        obs_t = pyro.sample(observation_name, distribution_instance.to_event(1), obs=obs_t)
         return obs_t
     
     @staticmethod
@@ -60,7 +60,7 @@ class TimeSeriesModel(nn.Module):
         mask = self.get_mask(t,batch_mask)
         distribution_instance = self.get_distribution_instance(self.transition_distribution, mask, *distribution_parameters)
         
-        z_t = pyro.sample(hidden_state_name, distribution_instance.to_event(2))
+        z_t = pyro.sample(hidden_state_name, distribution_instance.to_event(1))
         return z_t
 
     def __call__(self, batch: TensorIterable)-> torch.Tensor:
@@ -71,7 +71,8 @@ class TimeSeriesModel(nn.Module):
         time_range = range(1, t_max + 1)
         n_batches = padded_sequence.size(0)
 
-        z_prev = self.z_0.repeat(n_batches, 1)
+        z_prev = self.z_0.repeat(n_batches, 1).to(self.z_0)
+
 
         z_prev = self.run_over_time_range(z_prev, time_range, batch_mask, padded_sequence)
 

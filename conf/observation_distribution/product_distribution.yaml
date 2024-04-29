@@ -1,8 +1,9 @@
 defaults:
   - sub_distributions:
-      - multinomial
-      - poisson
       - normal
+      - categorical
+      - poisson
+
 
 _target_: src.utils.multi_modal_distribution.get_product_distribution
 

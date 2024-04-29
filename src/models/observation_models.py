@@ -1,8 +1,8 @@
 import torch
 from torch import nn as nn
 from src.models.elementary_components import Bias
-
-class LinearObservationModel(nn.Module):
+from lightning import LightningModule
+class LinearObservationModel(LightningModule):
 
     def __init__(self, obs_dim, z_dim):
         super().__init__()
@@ -16,7 +16,7 @@ class LinearObservationModel(nn.Module):
 
         return self.linear(z_t), self.Gamma**2
 
-class OrderedLogitModel(nn.Module):
+class OrderedLogitModel(LightningModule):
     #Not working yet
     def __init__(self,obs_dim,z_dim):
         super().__init__()
@@ -27,29 +27,34 @@ class OrderedLogitModel(nn.Module):
         theta = self.bias
         pass
 
-class MultionomialLink(nn.Module):
+class MultionomialLink(LightningModule):
     def __init__(self,obs_dim,z_dim,n_categories):
         super().__init__()
-        self.linear = nn.Linear(z_dim, obs_dim)
-        self.softmax = nn.Softmax()
+        self.linear = nn.Linear(z_dim, obs_dim*n_categories)
+        self.softmax = nn.Softmax(dim=-1)
+        self.n_categories = n_categories
 
-    def forward(self,z_t: torch.Tensor) -> torch.Tensor:
-        return self.softmax(self.linear(z_t))
 
-class PoissonLink(nn.Module):
+    def forward(self,z_t: torch.Tensor) -> tuple[torch.Tensor]:
+        shape = z_t.shape
+        x = self.linear(z_t)
+        x = x.view(shape[:-1] + (-1,self.n_categories))
+        return self.softmax(x),
+
+class PoissonLink(LightningModule):
     def __init__(self,obs_dim,z_dim):
         super().__init__()
         self.linear = nn.Linear(z_dim, obs_dim)
 
-    def forward(self,z_t: torch.Tensor) -> torch.Tensor:
-        return torch.exp(self.linear(z_t))
+    def forward(self,z_t: torch.Tensor) -> tuple[torch.Tensor]:
+        return torch.exp(self.linear(z_t)),
 
-class ListConcat(nn.Module):
+class ListConcat(LightningModule):
 
     def __init__(self,sub_models: dict[str,nn.Module]):
         #dict since the submodels are passed via hydra. I couldn't figure out how to pass the submodels as a list via the yaml config.
         # Hence the dict
         super().__init__()
-        self.models = list(sub_models.values())
+        self.models = nn.ModuleList(sub_models.values())
     def forward(self, *args,**kwargs) -> list:
         return [model(*args, **kwargs) for model in self.models]

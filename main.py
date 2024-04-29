@@ -18,7 +18,7 @@ def main(cfg: DictConfig):
 
     data_module = trainer.data_loader
 
-    lightning_trainer = LightningTrainer(logger=mlflow_logger,num_sanity_val_steps=0)
+    lightning_trainer = LightningTrainer(logger=mlflow_logger,num_sanity_val_steps=0,accelerator="cpu")
     lightning_trainer.fit(trainer,datamodule=data_module)
 
 

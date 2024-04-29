@@ -4,16 +4,25 @@ defaults:
   - override observation_model: multi_modal
   - override loss: force_elbo
   - override observation_distribution: product_distribution
+  - override data: multimodal_fake_data
 
 
 observation_model:
   sub_models:
+    normal_link:
+      obs_dim: 4
     multinomial_link:
       obs_dim: 3
     poisson_link:
       obs_dim: 2
-    normal_link:
-      obs_dim: 4
+
+#obs dim has to be sum of all obs_dim in observation_models
+obs_dim: 9
+
+data:
+  n_rois: 4
+  n_categorical: 3
+  n_poisson: 2
 
 loss:
   forcing_interval: 20
@@ -21,4 +30,4 @@ loss:
 
 hydra:
   searchpath:
-    - file://C:\Users\roman.nefedov\PycharmProjects\PLRNN_Family_Variational_Inference\conf
+    - file://conf
