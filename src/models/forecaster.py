@@ -1,4 +1,4 @@
-from src.models.time_series_model import TimeSeriesModel
+from src.models.time_series_model import HiddenMarkovModel
 from pyro.poutine import trace, replay
 from pyro import plate
 from typing import Callable
@@ -13,7 +13,7 @@ from typing import Any
 class Forecaster:
     PRED_PREFIX = "pred"
 
-    def __init__(self, model: TimeSeriesModel, guide: Callable[[TensorIterable], Any]) -> None:
+    def __init__(self, model: HiddenMarkovModel, guide: Callable[[TensorIterable], Any]) -> None:
         self.model = model
         self.guide = guide
 
@@ -62,7 +62,7 @@ class Forecaster:
         return [node["value"] for node in nodes]
 
     def process_trace(self, posterior_model_trace: Trace, lengths:list[int]) -> TensorIterable:
-        #TODO findout why the batch is processed apparently in wrong order
+
 
         inputed_observed_nodes = [posterior_model_trace.nodes[obs_node] for obs_node in
                                   posterior_model_trace.observation_nodes]

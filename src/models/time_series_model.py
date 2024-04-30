@@ -15,7 +15,7 @@ D_O = TypeVar("D_O", bound="TorchDistributionMixin")
 D_H = TypeVar("D_H", bound="TorchDistributionMixin")
 
 
-class TimeSeriesModel(LightningModule):
+class HiddenMarkovModel(LightningModule):
     HIDDEN_VARIABLE_NAME = "z"
     OBSERVED_VARIABLE_NAME = "x"
 

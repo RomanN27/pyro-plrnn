@@ -6,7 +6,7 @@ from src.utils.custom_typehint import TensorIterable
 import numpy as np
 from typing import Callable
 import functools
-import src.utils.custom_independent
+
 class ProductEventShape:
     # Not functional
     # Would have been used to implement a product distribution over distributions with different event shape dimensions
@@ -111,11 +111,6 @@ class ProductDistribution(TorchDistribution):
         assert len(set([len(es) for es in event_shapes])) == 1
         assert all([es[:-1] == event_shapes[0][:-1] for es in event_shapes])
 
-        self.event_shape = event_shapes[0][:-1]
-
-
-
-
 
     @property
     def batch_shape(self) -> torch.Size:
@@ -149,9 +144,6 @@ class ProductDistribution(TorchDistribution):
 
 
 
-    @event_shape.setter
-    def event_shape(self, value):
-        self._event_shape = value
 
 
 class Multinomial1(Multinomial):
@@ -163,25 +155,6 @@ class Multinomial1(Multinomial):
         super().expand(batch_shape, self)
 
 
-class RandIntMultinomial(Multinomial):
-    # Non hot encoded version of Multinomial
-    def __init__(self, *args, total_count=1, **kwargs):
-        if not isinstance(total_count, int):
-            raise NotImplementedError("inhomogeneous total_count is not supported")
-        self.total_count = total_count
-        self._categorical = Categorical(probs=probs, logits=logits)
-        self._binomial = Binomial(total_count=total_count, probs=self.probs)
-        batch_shape = self._categorical.batch_shape
-        event_shape = self._categorical.param_shape[-1:]
-        super().__init__(batch_shape, event_shape, validate_args=validate_args)
-
-    def sample(self, sample_shape=torch.Size()):
-        sample_shape = torch.Size(sample_shape)
-        sample = super().sample(sample_shape)
-        return torch.argmax(sample, dim=-1)
-
-    def log_prob(self, value):
-        return super().log_prob(torch.nn.functional.one_hot(value, num_classes=self.probs.size(-1)))
 
 
 def get_product_distribution(sub_distributions: dict[str: Type[TorchDistribution]]) -> Type[ProductDistribution]:

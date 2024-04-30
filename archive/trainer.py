@@ -12,7 +12,7 @@ from tqdm import tqdm
 import mlflow
 import re
 import torch.nn as nn
-from src.models.time_series_model import TimeSeriesModel
+from src.models.time_series_model import HiddenMarkovModel
 from typing import TYPE_CHECKING, TypeVar
 import torch
 if TYPE_CHECKING:
@@ -33,7 +33,7 @@ T = TypeVar("T", bound="Trainer")
 
 class Trainer(ABC):
     ML_FLOW_ARTIFACTS_SAVING_PATH = "../mlartifacts"
-    def __init__(self, time_series_model: TimeSeriesModel, variational_distribution: nn.Module,
+    def __init__(self, time_series_model: HiddenMarkovModel, variational_distribution: nn.Module,
                  data_loader: Dataset, optimizer: PyroOptim, elbo: ELBO):
         self.time_series_model = time_series_model
         self.variational_distribution = variational_distribution
@@ -54,7 +54,7 @@ class Trainer(ABC):
         observation_model = instantiate(cfg.observation_model)
         observation_distribution = instantiate(cfg.observation_distribution)
         transition_distribution = instantiate(cfg.transition_distribution)
-        time_series_model = TimeSeriesModel(plrnn, observation_model, observation_distribution, transition_distribution)
+        time_series_model = HiddenMarkovModel(plrnn, observation_model, observation_distribution, transition_distribution)
         metrics = [instantiate(metric) for metric in cfg.metriccollection.metrics.values()]
         metric_collection = PyroTimeSeriesMetricCollection(metrics,**cfg.metriccollection.kwargs)
         optimizer_class = instantiate(cfg.optimizer.optimizer_class)
