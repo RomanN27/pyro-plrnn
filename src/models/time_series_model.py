@@ -9,7 +9,7 @@ from typing import TypeVar, TYPE_CHECKING, Iterable, Optional
 from src.utils.custom_typehint import TensorIterable
 from lightning import LightningModule
 if TYPE_CHECKING:
-    from pyro.distributions import TorchDistributionMixin
+    from pyro.distributions import TorchDistributionMixin, TorchDistribution
 
 D_O = TypeVar("D_O", bound="TorchDistributionMixin")
 D_H = TypeVar("D_H", bound="TorchDistributionMixin")
