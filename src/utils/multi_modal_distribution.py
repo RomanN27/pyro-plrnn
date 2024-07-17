@@ -9,7 +9,7 @@ import functools
 
 class ProductEventShape:
     # Not functional
-    # Would have been used to implement a product distribution over distributions with different event shape dimensions
+    # Would have been used to implement a product distribution over distributions with different number of event shape dimensions
     def __init__(self, *event_shapes: torch.Size):
         self.event_shapes = event_shapes
     def __radd__(self, other: torch.Size) -> "ProductBatchAndEventShape":
@@ -20,7 +20,7 @@ class ProductEventShape:
 
 class ProductBatchAndEventShape:
     #Not functional
-    # Would have been used to implement a product distribution over distributions with different event shape dimensions
+    # Would have been used to implement a product distribution over distributions with different number of event shape dimensions
     def __init__(self,batch_shape: torch.Size, event_shape: ProductEventShape):
         self.batch_shape = batch_shape
         self.event_shape = event_shape
@@ -53,9 +53,9 @@ class ProductBatchAndEventShape:
 class GeneralProductDistribution(TorchDistribution):
     #not functional
 
-    # It turns out it is not trivial to implement a product distribution over distributions with different event shape dimensions
-    # Several classes of Pyro depend on the event shape being the same for all distributions (e.g. Independent)
-    # At the moment ProductDistributions over distributions with the same event shape are enough
+    # It turns out it is not trivial to implement a product distribution over distributions with different number of event shape dimensions
+    # Several classes of Pyro depend on the length of the event shape being the same for all distributions (e.g. Independent)
+    # At the moment ProductDistributions over distributions with the same event shape length are enough
     # Hence the implementation is not complete
 
     distributions: list[Type[TorchDistribution]] = []

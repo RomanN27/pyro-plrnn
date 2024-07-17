@@ -160,7 +160,14 @@ class AnnealingModule(TimeSeriesModule):
     def on_train_epoch_end(self) -> None:
         self.increase_annealing_factor()
 
+#TODO Implement timevarying masking
 
+
+class t:
+    def condition_observation_model(self,batch: torch.Tensor):
+        t_max = batch.size(-1)
+        observed_data = {f"{self.OBSERVED_VARIABLE_NAME}_{t}":batch[:,t-1,:] for t in range(1,t_max+1)}
+        self.observation_model = pyro.poutine.condition(self.observation_model, data=observed_data)
 
 
 class GeneralTeacherForcingModule(TimeSeriesModule):

@@ -1,8 +1,36 @@
+from typing import Any, Protocol, TYPE_CHECKING,Callable, Type
+
 import torch
 from torch import nn as nn
-
+import pyro
 from src.models.elementary_components import Diagonal, OffDiagonal
 from lightning import LightningModule
+from uuid import uuid4
+if TYPE_CHECKING:
+    from pyro.distributions import Distribution
+
+
+random_name = lambda : str(uuid4())
+
+class TransitionModel(Protocol):
+    z_dim: int
+
+    def __call__(self, *args, **kwargs)->tuple:...
+
+class ModelBasedSampler(LightningModule):
+    def __init__(self, transition_model: nn.Module, distribution:Type["Distribution"]):
+        super().__init__()
+        self.model = transition_model
+        self.distribution =  distribution
+
+    def forward(self, z, name:str = random_name()) -> torch.Tensor:
+
+        dist_parameters = self.model(z)
+        dist = self.distribution(*dist_parameters) #typecheck error because Distribuiton itself does not implement init however all subclasses do
+        return pyro.sample(name,dist)
+
+
+
 
 class PLRNN(LightningModule):
 

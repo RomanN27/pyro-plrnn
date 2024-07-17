@@ -9,10 +9,25 @@ from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 import os
 import numpy as np
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Callable, Protocol
 from lightning import LightningDataModule
+from abc import ABC,abstractmethod
 
 INDICATE_PATH: Optional[Path] = Path(os.environ.get("INDICATE_PATH")) if os.environ.get("INDICATE_PATH") else None
+
+
+class TimeIndexer(Protocol):
+
+    def __getitem__(self, item:int|slice)->"TimeSeriesDataset":
+        pass
+
+
+class TimeSeriesDataset(ABC,Dataset):
+
+    @property
+    @abstractmethod
+    def tloc(self)->TimeIndexer:
+        pass
 
 
 def create_fake_mrt_data(n_rois, T, n):
@@ -41,6 +56,7 @@ def get_fake_count_data(mrt_data:list[torch.Tensor],intensity:float,n_samples):
     fake_count_data = [torch.poisson(torch.ones(len(ten), n_samples)*intensity) for ten in mrt_data]
 
     return fake_count_data
+
 
 
 

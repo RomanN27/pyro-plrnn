@@ -1,7 +1,7 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
-
+import torch
 
 SMOOTHING_SIGMA = 10
 FREQUENCY_CUTOFF = 20000  # in Hertz
@@ -43,7 +43,7 @@ def get_average_spectrum(trajectories):
     for trajectory in trajectories:
         fft_decibel = fft_in_decibel(trajectory)
         spectrum.append(fft_decibel)
-    spectrum = np.array(spectrum).mean(axis=0)
+    spectrum = torch.tensor(np.array(spectrum).mean(axis=0))
     return spectrum
 
 

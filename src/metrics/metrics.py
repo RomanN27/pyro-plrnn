@@ -131,7 +131,7 @@ class PowerSpectrumCorrelation(Metric):
             spectrum_true = x_true[:self.frequency_cutoff]
             spectrum_gen = x_gen[:self.frequency_cutoff]
             # plot_spectrum_comparison(s_true=spectrum_true, s_gen=spectrum_gen)
-            pse_corr_per_dim = np.corrcoef(x=spectrum_gen, y=spectrum_true)[0, 1]
+            pse_corr_per_dim = torch.corrcoef(x=spectrum_gen, y=spectrum_true)[0, 1]
             pse_corrs.append(pse_corr_per_dim)
 
         return torch.mean(torch.tensor(pse_corrs))

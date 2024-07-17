@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     import torch
     from pyro.poutine.runtime import Message
     from pyro.poutine.trace_struct import Trace
+#TODO implement optimal forcing interval
 class ForcingIntervalReplayMessenger(Messenger):
     HIDDEN_VARIABLE_NAME = "z"
     def __init__(
