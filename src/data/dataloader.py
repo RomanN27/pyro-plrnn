@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Optional, Tuple, Callable, Protocol
 from lightning import LightningDataModule
 from abc import ABC,abstractmethod
+from src.data.lorentz.lorentz_system import GeneralLorentzSystem
 
 INDICATE_PATH: Optional[Path] = Path(os.environ.get("INDICATE_PATH")) if os.environ.get("INDICATE_PATH") else None
 
@@ -28,6 +29,23 @@ class TimeSeriesDataset(ABC,Dataset):
     @abstractmethod
     def tloc(self)->TimeIndexer:
         pass
+
+
+class OneSubjectVanillaLorentzDataSet(TimeSeriesDataset):
+
+    def __init__(self):
+        self.tensors = torch.tensor(GeneralLorentzSystem().run_system()).unsqueeze(0)
+        self.tloc_ = type('MyClass', (object,), {'__getitem__':lambda self2,item :self.tensors[0,item]})()
+
+    def __len__(self):
+        return 1
+
+    def __getitem__(self, item):
+        return self.tensors[item]
+
+    @property
+    def tloc(self) ->TimeIndexer:
+        return self.tloc_
 
 
 def create_fake_mrt_data(n_rois, T, n):
@@ -97,7 +115,7 @@ class IndicateDataSet(Dataset):
 
     def __init__(self, tensors: list[torch.Tensor] | torch.Tensor):
         self.tensors = [(tensor - tensor.mean()) / tensor.std() for tensor in tensors]
-        self.tloc = tLocIndexer(self)
+        self.tloc = tLoc(self)
 
     @staticmethod
     def get_indicate_data_tensors(indicate_data_path):

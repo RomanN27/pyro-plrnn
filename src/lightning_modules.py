@@ -2,12 +2,13 @@ import logging
 import os
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, Any
 
 import mlflow
 import torch
 import torch.nn as nn
 from hydra.utils import instantiate
+from lightning.pytorch.utilities.types import STEP_OUTPUT
 
 from pyro.infer import Predictive, Trace_ELBO
 from pyro.optim import PyroOptim
@@ -26,7 +27,8 @@ from src.utils.custom_typehint import TensorIterable
 from pyro.poutine import trace, replay
 from src.metrics.metrics import  PyroTimeSeriesMetricCollection
 from src.models.forecaster import Forecaster
-
+from pyro.poutine import condition
+from src.training import observe
 
 T = TypeVar("T", bound="TimeSeriesModule")
 
@@ -36,6 +38,7 @@ class TimeSeriesModule(LightningModule):
                  data_loader: Dataset, optimizer: PyroOptim, elbo: Trace_ELBO, metric_collection: PyroTimeSeriesMetricCollection):
         super().__init__()
         self.time_series_model = time_series_model
+        self.unobserved_observation_model = self.time_series_model.observation_model
         self.variational_distribution = variational_distribution
         self.data_loader = data_loader
         self.optimizer = optimizer
@@ -75,6 +78,9 @@ class TimeSeriesModule(LightningModule):
         results = {k:v.numpy() for k,v in results.items()}
         #self.logger.log_metrics(results)
         self.metric_collection.reset()
+
+    def training_step(self, batch: torch.Tensor):
+        self.time_series_model.observation_model = observe(self.unobserved_observation_model,batch)
 
     @classmethod
     def get_config_from_run_id(cls: type[T], run_id: str) -> DictConfig:
