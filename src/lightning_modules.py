@@ -2,7 +2,7 @@ import logging
 import os
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypeVar, Any
+from typing import TYPE_CHECKING, TypeVar, Any, Protocol, Callable
 
 import mlflow
 import torch
@@ -28,17 +28,22 @@ from pyro.poutine import trace, replay
 from src.metrics.metrics import  PyroTimeSeriesMetricCollection
 from src.models.forecaster import Forecaster
 from pyro.poutine import condition
-from src.training import observe
+from src.training.messengers.handlers import observe
+from pyro.poutine.messenger import Messenger
+from contextlib import ExitStack
 
 T = TypeVar("T", bound="TimeSeriesModule")
 
+class ElboLoss(Protocol):
+
+    def differentiable_loss(self, model: Callable, guide: Callable, *args, **kwargs)->torch.Tensor:...
 
 class TimeSeriesModule(LightningModule):
     def __init__(self, time_series_model: HiddenMarkovModel, variational_distribution: nn.Module,
-                 data_loader: Dataset, optimizer: PyroOptim, elbo: Trace_ELBO, metric_collection: PyroTimeSeriesMetricCollection):
+                 data_loader: Dataset, optimizer: PyroOptim, elbo: ElboLoss, metric_collection: PyroTimeSeriesMetricCollection,
+                 messenger: list[Messenger]):
         super().__init__()
         self.time_series_model = time_series_model
-        self.unobserved_observation_model = self.time_series_model.observation_model
         self.variational_distribution = variational_distribution
         self.data_loader = data_loader
         self.optimizer = optimizer
@@ -46,6 +51,7 @@ class TimeSeriesModule(LightningModule):
         self.predictive = Predictive(self.time_series_model, guide = self.variational_distribution,num_samples=1)
         self.metric_collection = metric_collection
         self.forecaster = Forecaster(self.time_series_model, self.variational_distribution)
+        self.messenger = messenger
 
     def configure_optimizers(self):
         #return self.optimizer
@@ -80,7 +86,14 @@ class TimeSeriesModule(LightningModule):
         self.metric_collection.reset()
 
     def training_step(self, batch: torch.Tensor):
-        self.time_series_model.observation_model = observe(self.unobserved_observation_model,batch)
+        with ExitStack() as stack:
+            for msgr in self.messenger:
+                stack.enter_context(msgr)
+
+            with observe(batch=batch,observation_group_symbol=self.time_series_model.OBSERVED_VARIABLE_NAME):
+                loss = self.elbo.differentiable_loss(self.time_series_model, self.guide, batch)
+
+        return loss
 
     @classmethod
     def get_config_from_run_id(cls: type[T], run_id: str) -> DictConfig:
@@ -128,64 +141,4 @@ class TimeSeriesModule(LightningModule):
 
 
 
-
-class AnnealingModule(TimeSeriesModule):
-
-
-    def __init__(self, beginning_annealing_factor: int, annealing_epochs: int, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._current_annealing_factor = beginning_annealing_factor
-        self.delta = (1 - beginning_annealing_factor) / annealing_epochs
-
-    @property
-    def current_annealing_factor(self):
-        return self._current_annealing_factor
-
-    @current_annealing_factor.setter
-    def current_annealing_factor(self,value):
-        #clip annealing factor to allowed range in [0,1]
-        self._current_annealing_factor = max(min(1, value),0)
-    def increase_annealing_factor(self):
-        self.current_annealing_factor += self.delta
-
-    def annealing_selector(self, msg: "Message") -> bool:
-        z_name = self.time_series_model.HIDDEN_VARIABLE_NAME
-        pattern = rf"^{z_name}_\d+"
-        name = msg["name"]
-        return name and bool(re.match(pattern, name))
-
-    def annealing_hider(self,msg: "Message") -> bool:
-        return not self.annealing_selector(msg)
-    def training_step(self, batch: TensorIterable):
-
-        with scale(scale = self.current_annealing_factor):
-            with block(hide_fn=self.annealing_hider):
-                    loss = self.elbo.differentiable_loss(self.time_series_model,self.variational_distribution, batch)
-
-        self.logger.experiment.log_metric(self.logger.run_id,key ="loss",value =  loss, step=self.global_step)
-    def on_train_epoch_end(self) -> None:
-        self.increase_annealing_factor()
-
-#TODO Implement timevarying masking
-
-
-class t:
-    def condition_observation_model(self,batch: torch.Tensor):
-        t_max = batch.size(-1)
-        observed_data = {f"{self.OBSERVED_VARIABLE_NAME}_{t}":batch[:,t-1,:] for t in range(1,t_max+1)}
-        self.observation_model = pyro.poutine.condition(self.observation_model, data=observed_data)
-
-
-class GeneralTeacherForcingModule(TimeSeriesModule):
-
-    def __init__(self):
-        pass
-
-    def training_step(self, batch: TensorIterable):
-        guide_trace = trace(self.variational_distribution).get_trace(batch)
-        model_trace = trace(replay(self.time_series_model, trace=guide_trace)
-        ).get_trace(batch)
-
-        model_trace.compute_log_prob()
-        guide_trace.compute_score_parts()
 

@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING
 import torch
+
+import src.data.time_series_dataset
 from src.utils.custom_typehint import TensorIterable
 import random
 from torch import Tensor
@@ -54,8 +56,8 @@ class GaussianMaximumMeanDiscrepancy(Metric):
     def get_scalar_diff(self, X, Y):
         XX = (X**2).sum(1)
         YY = (Y**2).sum(1)
-        XY = X @ Y.T
-        diff_scalar_product = XX.reshape(-1,1) - 2 * XY.T + YY.reshape(1,-1)
+        XY = X @ src.data.time_series_dataset.T
+        diff_scalar_product = XX.reshape(-1,1) - 2 * src.data.time_series_dataset.T + YY.reshape(1, -1)
         return diff_scalar_product
 
     def sample_pad(self, x_true):

@@ -4,6 +4,8 @@ The attractor geometry is approximated by a GMM with Gaussian distribution at ea
 """
 import torch as tc
 
+import src.data.time_series_dataset
+
 
 def calc_kl_with_covariance_approximation(model, x):
     time_steps = min(len(x), 5000)
@@ -50,7 +52,7 @@ def get_prior_mean(gen_model, time_steps):
 def get_prior_covariance(gen_model, time_steps):
     sigma_gen = tc.diag(gen_model.R_z ** 2)
     A, W, h = gen_model.get_latent_parameters()
-    c = tc.inverse(tc.eye(A.size()[0]) - (A + W).T.matmul(A + W)).matmul(sigma_gen)
+    c = tc.inverse(tc.eye(A.size()[0]) - src.data.time_series_dataset.T.matmul(A + W)).matmul(sigma_gen)
     return c.diag().repeat(time_steps, 1)
 
 

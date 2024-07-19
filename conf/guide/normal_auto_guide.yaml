@@ -2,8 +2,8 @@ _target_: pyro.infer.autoguide.AutoDiagonalNormal
 model:
   _target_: src.models.time_series_model.HiddenMarkovModel
   _args_:
-    - ${transition_model}
-    - ${observation_model}
+    - ${transition_sampler}
+    - ${observation_sampler}
     - ${observation_distribution}
     - ${transition_distribution}
 init_scale: 0.1

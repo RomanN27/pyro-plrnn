@@ -1,0 +1,13 @@
+defaults:
+  - time_series_model:
+    _target_: src.models.time_series_model.HiddenMarkovModel
+    transition_sampler: plrnn_normal
+    observation_sampler: linear_normal
+  - variational_distribution: rnn
+  - data_loader: data_module
+  - optimizer: adam
+  - elbo: force_elbo
+  - metric_collection: metriccollection
+  - messenger:
+    - annealing
+_target_: src.lightning_module.TimeSeriesModule

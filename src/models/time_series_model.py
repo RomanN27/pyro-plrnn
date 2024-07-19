@@ -22,15 +22,15 @@ class HiddenMarkovModel(LightningModule):
     HIDDEN_VARIABLE_NAME = "z"
     OBSERVED_VARIABLE_NAME = "x"
 
-    def __init__(self, transition_model: ModelBasedSampler,
-                 observation_model: ModelBasedSampler,
-                  *args,
+    def __init__(self, transition_sampler: "ModelBasedSampler",
+                 observation_sampler: "ModelBasedSampler",
+                 *args,
                  **kwargs):
         super().__init__(*args, **kwargs)
-        self.transition_model = transition_model
-        self.observation_model = observation_model
+        self.transition_sampler = transition_sampler
+        self.observation_sampler = observation_sampler
 
-        self.z_0 = nn.Parameter(torch.zeros(self.transition_model.z_dim))
+        self.z_0 = nn.Parameter(torch.zeros(self.transition_sampler.model.z_dim))
 
     def __call__(self, batch: torch.Tensor)-> torch.Tensor:
         pyro.module("time_series_model", self)
@@ -54,10 +54,10 @@ class HiddenMarkovModel(LightningModule):
 
     def run_step(self, t: int, z_prev: torch.Tensor ):
         hidden_state_name = f"{self.HIDDEN_VARIABLE_NAME}_{t}"
-        z_t = self.transition_model(z_prev,hidden_state_name)
+        z_t = self.transition_sampler(z_prev, hidden_state_name)
 
         observation_name = f"{self.OBSERVED_VARIABLE_NAME}_{t}"
-        self.observation_model(z_t, observation_name)
+        self.observation_sampler(z_t, observation_name)
 
         return z_t
 
@@ -72,15 +72,15 @@ class HiddenMarkovModel(LightningModule):
 
 
 class BayesianHiddenMarkovModel(HiddenMarkovModel):
-    def __init__(self, transition_model: nn.Module,
-                 observation_model: nn.Module,
+    def __init__(self, transition_sampler: nn.Module,
+                 observation_sampler: nn.Module,
                  observation_distribution: Type[D_O],
                  transition_distribution: Type[D_H],
                  transition_prior: Callable[[], "TorchDistributionMixin"],
                  z_0_prior: Callable[[], "TorchDistributionMixin"],
                  collate_fn: Callable[[TensorIterable], tuple[torch.Tensor, torch.Tensor]] = collate_fn_2, *args,
                  **kwargs):
-        super().__init__(transition_model, observation_model, observation_distribution, transition_distribution, collate_fn, *args, **kwargs)
+        super().__init__(transition_sampler, observation_sampler, observation_distribution, transition_distribution, collate_fn, *args, **kwargs)
         self.transition_prior = transition_prior
         self.z_0_prior = z_0_prior
 
@@ -118,8 +118,8 @@ class BayesianHiddenMarkovModel(HiddenMarkovModel):
         return z_prev
 
     def run_step(self, t: int, z_prev: torch.Tensor, padded_sequence: Optional[torch.Tensor] = None, batch_mask: Optional[torch.Tensor] = None, sampled_transition_params: torch.Tensor = None):
-        distribution_parameters = self.transition_model(z_prev, sampled_transition_params)
+        distribution_parameters = self.transition_sampler(z_prev, sampled_transition_params)
         z_t = self.sample_next_hidden_state(t, batch_mask, *distribution_parameters)
-        observation_distribution_parameters = self.observation_model(z_t)
+        observation_distribution_parameters = self.observation_sampler(z_t)
         self.sample_observation(t, padded_sequence, batch_mask, *observation_distribution_parameters)
         return z_t

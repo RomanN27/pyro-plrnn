@@ -23,7 +23,7 @@ class ModelBasedSampler(LightningModule):
         self.model = transition_model
         self.distribution =  distribution
 
-    def forward(self, z, name:str = random_name()) -> torch.Tensor:
+    def forward(self, z: torch.Tensor, name:str = random_name()) -> torch.Tensor:
 
         dist_parameters = self.model(z)
         dist = self.distribution(*dist_parameters) #typecheck error because Distribuiton itself does not implement init however all subclasses do

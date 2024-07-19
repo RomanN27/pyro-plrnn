@@ -1,6 +1,9 @@
 import torch as tc
 import matplotlib.pyplot as plt
 
+import src.data.time_series_dataset
+
+
 # TODO reimplement numpy version (without sparse tensors)
 # TODO properly test klx as a loss function
 
@@ -33,11 +36,11 @@ def plot_kl(x_gen, x_true, n_bins):
         kl_string = '{:.2f}'.format(kl_value)
 
     fig, axs = plt.subplots(1, 2)
-    axs[0].imshow(p_gen.numpy().T[::-1])
+    axs[0].imshow(src.data.time_series_dataset.T[::-1])
     axs[0].set_xticks(())
     axs[0].set_yticks(())
     axs[0].set_title('KLx: {}'.format(kl_string))
-    axs[1].imshow(p_true.numpy().T[::-1])
+    axs[1].imshow(src.data.time_series_dataset.T[::-1])
     axs[1].set_xticks(())
     axs[1].set_yticks(())
     axs[1].set_title('data')
