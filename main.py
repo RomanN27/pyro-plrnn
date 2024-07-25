@@ -1,60 +1,27 @@
-from src.lightning_module import AnnealingModule, TimeSeriesModule
 import hydra
-from lightning.pytorch.loggers import MLFlowLogger
-
-from omegaconf import DictConfig, OmegaConf
-import mlflow
-from torchinfo import summary
+from hydra.utils import instantiate
 from lightning.pytorch import Trainer as LightningTrainer
+from lightning.pytorch.loggers import MLFlowLogger
+from omegaconf import DictConfig
 
-mlflow_logger = MLFlowLogger()
+from src.lightning_module import LightningVariationalHiddenMarkov
 
-
+#mlflow_logger = MLFlowLogger()
 @hydra.main(version_base=None, config_path="conf", config_name="default_config")
 def main(cfg: DictConfig):
+    lightning_module: LightningVariationalHiddenMarkov = instantiate(cfg)
+    from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
 
 
-    cfg, trainer = get_and_load_trainer(cfg)
+    path = r"C:\Users\roman.nefedov\PycharmProjects\PLRNN_Family_Variational_Inference\plots\checkpoints"
+    checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="dsr_loss")
+    early_stopping = EarlyStopping(monitor="dsr_loss", mode="min")
+    callbacks = [checkpoint_callback,early_stopping]
+    lightning_trainer = LightningTrainer(callbacks=callbacks, enable_checkpointing=True, num_sanity_val_steps=0,
+                                         accelerator="cpu", max_epochs=10000, default_root_dir=path,min_epochs=15)
 
-    data_module = trainer.data_loader
-
-    lightning_trainer = LightningTrainer(logger=mlflow_logger,num_sanity_val_steps=0,accelerator="cpu")
-    lightning_trainer.fit(trainer,datamodule=data_module)
+    lightning_trainer.fit(lightning_module, datamodule=lightning_module.data_loader)
 
 
-
-
-    #with mlflow.start_run(nested=True) as run:
-    #    log_to_mlflow(trainer, cfg)
-    #    print(run.info.run_id)
-    #    trainer.train(**cfg.training)
-
-        #artifact_path = artifact_path_from_uri(run.info.artifact_uri)
-       # trainer.save(artifact_path + "/model.pt")
-
-def log_to_mlflow(trainer, cfg):
-    with open("model_summary.txt", "w", encoding="utf-8") as f:
-        f.write(str(summary(trainer.hidden_markov_model)))
-    mlflow.log_artifact("model_summary.txt")
-
-    mlflow.set_tag("Training Info", "Just trying mlflow a bit")
-    params = OmegaConf.to_yaml(cfg, resolve=True)
-    mlflow.log_params({"config": params})
-
-def get_and_load_trainer(cfg):
-    if run_id := cfg.get("run_id"):
-        training_cfg = TimeSeriesModule.get_config_from_run_id(run_id)
-        cfg = OmegaConf.merge(training_cfg, cfg)
-        mlflow_client = mlflow.tracking.MlflowClient()
-        artifact_uri = mlflow_client.get_run(run_id=run_id).info.artifact_uri
-        artifact_path = artifact_path_from_uri(artifact_uri)
-    trainer = AnnealingModule.get_trainer_from_config(cfg)
-    if run_id:
-        trainer.load(artifact_path + "/model.pt")
-    return cfg, trainer
-
-def artifact_path_from_uri(uri:str)->str:
-    return uri.replace("mlflow-artifacts:", "mlartifacts")
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
