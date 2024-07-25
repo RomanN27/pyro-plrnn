@@ -1,0 +1,4 @@
+_target_: src.data_loader.dataloader.FakeDataModule
+n_rois: 19
+n: 1
+T: 512

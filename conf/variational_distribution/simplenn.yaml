@@ -1,0 +1,5 @@
+_target_: src.models.guides.SimpleNormalNNGuide
+n_time_steps: 472
+input_dim: ${obs_dim}
+output_dim: ${z_dim}
+hidden_dim: 300

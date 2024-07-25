@@ -58,7 +58,8 @@ _T = TypeVar("_T")
 
 @overload
 def subspace_replay(
-        sub_space_dim: int,
+        subspace_dim: int,
+        group_name: str,
         trace: "Trace"
 ) -> SubSpaceReplayMessenger: ...
 
@@ -66,7 +67,8 @@ def subspace_replay(
 @overload
 def subspace_replay(
         fn: Callable[_P, _T],
-        sub_space_dim: int,
+        subspace_dim: int,
+        group_name: str,
         trace: "Trace",
 ) -> Callable[_P, _T]: ...
 
@@ -74,7 +76,8 @@ def subspace_replay(
 @_make_handler(SubSpaceReplayMessenger)
 def subspace_replay(  # type: ignore[empty-body]
         fn: Optional[Callable[_P, _T]],
-        sub_space_dim: int,
+        group_name: str,
+        subspace_dim: int,
         trace: "Trace"
 ) -> Union[SubSpaceReplayMessenger, Callable[_P, _T]]: ...
 
@@ -101,9 +104,9 @@ def observe(fn: Callable[_P, _T],
 def force(
         trace: Trace,
         forcing_interval: int,
-        group_symbol: str,
+        latent_group_name: str,
         alpha: float = 1.,
-        sub_space_dim: Optional[int] = None
+        subspace_dim: Optional[int] = None
 ) -> ForcingIntervalReplayMessenger: ...
 
 
@@ -112,9 +115,9 @@ def force(
         fn: Callable[_P, _T],
         trace: Trace,
         forcing_interval: int,
-        group_symbol: str,
+        latent_group_name: str,
         alpha: float = 1.,
-        sub_space_dim: Optional[int] = None
+        subspace_dim: Optional[int] = None
 ) -> Callable[_P, _T]: ...
 
 
@@ -122,7 +125,7 @@ def force(
 def force(fn: Callable[_P, _T],
           trace: Trace,
           forcing_interval: int,
-          group_symbol: str,
+          latent_group_name: str,
           alpha: float = 1.,
-          sub_space_dim: Optional[int] = None) -> Union[Callable[_P, _T], ForcingIntervalReplayMessenger]:
+          subspace_dim: Optional[int] = None) -> Union[Callable[_P, _T], ForcingIntervalReplayMessenger]:
     ...

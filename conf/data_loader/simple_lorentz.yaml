@@ -1,0 +1,15 @@
+_target_: src.data.dataloader.TimeSeriesDataModule
+dataset:
+  _target_: src.data.time_series_dataset.VanillaTensorTimeSeriesDataset
+  tensors:
+    _target_: src.data.data_simulator.data_simulator.DataSimulator.hydra_get_data
+    combinations:
+      - initial_state: [1, 1, 1]
+    drift_function:
+      _target_: hydra.utils.get_method
+      path: src.data.data_simulator.drift_functions.lorentz_drift
+    initial_state: [1, 1, 1]
+
+
+
+

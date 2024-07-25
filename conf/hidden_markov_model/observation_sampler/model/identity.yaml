@@ -1,0 +1,2 @@
+_target_: src.models.observation_models.IdentityObservationModel
+obs_dim: ${obs_dim}

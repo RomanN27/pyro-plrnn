@@ -1,5 +1,0 @@
-defaults:
-  transition_model: dendPLRNN
-  transition_distribution: normal
-
-_target_: src.models.transition_models.ModelBasedSampler

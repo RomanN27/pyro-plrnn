@@ -2,26 +2,26 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from typing import TYPE_CHECKING, Dict, Optional,overload, ParamSpec, TypeVar, Callable, Union
-from src.training.messengers import GeneralTraceReplayMessenger, SubspaceUpdater
+from src.utils.trace_utils import is_group_msg
 
 from pyro.poutine.messenger import Messenger
 
-if TYPE_CHECKING:
-    import torch
+import torch
 
-    from pyro.poutine.runtime import Message
-    from pyro.poutine.trace_struct import Trace
+from pyro.poutine.runtime import Message
+from pyro.poutine.trace_struct import Trace
 
 
 _P = ParamSpec("_P")
 _T = TypeVar("_T")
 
-class SubSpaceReplayMessenger(GeneralTraceReplayMessenger):
+class SubSpaceReplayMessenger(Messenger):
 
 
     def __init__(
         self,
-        sub_space_dim: int,
+        subspace_dim: int,
+        group_name: str,
         trace: "Trace" = None
     ) -> None:
         """
@@ -31,5 +31,19 @@ class SubSpaceReplayMessenger(GeneralTraceReplayMessenger):
         Stores trace in an attribute.
         """
 
-        updater = SubspaceUpdater(sub_space_dim)
-        super().__init__(trace=trace, updater=updater)
+        self.subspace_dim=subspace_dim
+        self.group_name=group_name
+        self.trace = trace
+        super().__init__()
+
+    def _postprocess_message(self, msg: Message) -> None:
+        if not is_group_msg(msg,self.group_name):
+            return
+
+        guide_msg = self.trace.nodes[msg["name"]]
+        guide_value = guide_msg["value"]
+
+
+        msg["done"] = True
+        msg["infer"] = guide_msg["infer"]
+        msg["value"][..., :self.subspace_dim] = guide_value[..., :self.subspace_dim]

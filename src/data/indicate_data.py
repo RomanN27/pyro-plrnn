@@ -11,7 +11,7 @@ from lightning import LightningDataModule
 
 from src.data.time_series_dataset import T_el, DataType, TimeSeriesDataset, VanillaTensorTimeSeriesDataset, \
     VanillaListTimeSeriesDataset
-from src.data.utils import load_matlab_data
+from src.utils.data_utils import load_matlab_data
 
 INDICATE_PATH: Optional[Path] = Path(os.environ.get("INDICATE_PATH")) if os.environ.get("INDICATE_PATH") else None
 

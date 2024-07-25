@@ -10,7 +10,8 @@ from abc import abstractmethod
 from torch.utils.data import Dataset
 from lightning import LightningModule
 from src.utils.custom_typehint import TensorIterable
-
+from src.models.model_sampler import ModelBasedSampler
+from pyro.distributions import MultivariateNormal, Delta
 class Guide:
     @property
     def data_set(self) -> Dataset:
@@ -26,8 +27,8 @@ class Guide:
 
 class Combiner(LightningModule):
     """
-    Parameterizes `q(z_t | z_{t-1}, x_{t:T})`, which is the basic building block
-    of the guide (i.e. the variational distribution). The dependence on `x_{t:T}` is
+    Parameterizes `q(z_t | z_{delta_t-1}, x_{delta_t:T})`, which is the basic building block
+    of the variational_distribution (i.e. the variational distribution). The dependence on `x_{delta_t:T}` is
     through the hidden state of the RNN (see the PyTorch module `rnn` below)
     """
     def __init__(self, z_dim, rnn_dim):
@@ -68,36 +69,62 @@ class InitialStateGuide(LightningModule):
         return locs, scales, mixing_weights
 
 class RNNGuide(LightningModule):
-    def __init__(self, rnn: nn.RNN, combiner: Combiner, initial_state_guide: InitialStateGuide, dist: Type["TorchDistributionMixin"]):
+    def __init__(self, rnn: nn.RNN, combiner: Combiner, dist: Type["TorchDistributionMixin"]):
         super().__init__()
         self.rnn = rnn
         self.combiner = combiner
-        self.initial_state_guide = initial_state_guide
         self.dist = dist
         self.h_0 = nn.Parameter(torch.zeros(1, 1, self.rnn.hidden_size))
 
-    def __call__(self, batch: TensorIterable):
-        padded_sequence, batch_reversed, batch_mask, batch_seq_lengths = collate_fn(batch)
+    def __call__(self, batch: torch.Tensor):
+        reversed_batch = batch.flip(1)
         pyro.module("dmm", self)
-        T_max = padded_sequence.size(1)
-        n = padded_sequence.size(0)
-        h_0_contig = self.h_0.expand(self.rnn.num_layers, n, self.rnn.hidden_size).contiguous()
-        rnn_output, _ = self.rnn(batch_reversed, h_0_contig)
-        rnn_output = pad_and_reverse(rnn_output, batch_seq_lengths)
 
-        # Infer initial state z_q_0
-        x_0 = padded_sequence[:, 0, :]  # Assuming the input x is available in the first time step
-        locs, scales, mixing_weights = self.initial_state_guide(x_0)
+        rnn_output, _ = self.rnn(reversed_batch)
 
-        z_q_0 = pyro.sample("z_0", dist.MixtureSameFamily(
-            dist.Categorical(mixing_weights),
-            dist.Independent(dist.Normal(locs, scales), 1)
-        ).to_event(1))
 
-        z_prev = z_q_0
-        for t in pyro.markov(range(1, T_max + 1)):
-            z_loc, z_scale = self.combiner(z_prev, rnn_output[:, t - 1, :])
-            z_dist = self.dist(z_loc, z_scale)
-            masked_distribution = z_dist.mask(batch_mask[:, t - 1:t])
-            z_t = pyro.sample("z_%d" % t, masked_distribution.to_event(1))
-            z_prev = z_t
+class SimpleNormalNNGuide(LightningModule):
+
+    def __init__(self, n_time_steps: int, input_dim: int, output_dim: int , hidden_dim):
+        super().__init__()
+        self.output_dim= output_dim
+        self.lin_1 = nn.Linear(n_time_steps*input_dim,hidden_dim)
+        self.relu_1 = nn.ReLU()
+        self.scale_layer = nn.Linear(hidden_dim, n_time_steps * output_dim ** 2)
+        self.softplus= nn.Softplus()
+        self.mu_layer = nn.Linear(hidden_dim, n_time_steps * output_dim)
+
+
+    def __call__(self, batch: torch.Tensor):
+        x = self.lin_1(batch.reshape(batch.size(0),-1 ))
+        scale = self.scale_layer(x).reshape(batch.size(0),batch.size(1),self.output_dim,self.output_dim)
+        scale_diag = torch.diagonal(scale,dim1=-2,dim2=-1)
+        scale_diag = self.softplus(scale_diag)
+        scale_diag = torch.diag_embed(scale_diag)
+        scale_lower_tria = torch.tril(scale,diagonal=-1)
+        scale = scale_lower_tria + scale_diag
+        mu = self.mu_layer(x).reshape(batch.size(0),batch.size(1),self.output_dim)
+        Z =[]
+        for t, (mu_t, scale_t) in enumerate(zip(torch.split(mu,1,1), torch.split(scale,1,1))):
+            normal = MultivariateNormal(mu_t.squeeze(1), scale_tril=scale_t.squeeze(1))
+            z = pyro.sample(f"z_{t+1}",normal.to_event(1))
+            Z.append(z)
+        return Z
+
+
+class IdentityGuide(LightningModule):
+    def __init__(self):
+        super().__init__()
+        self.mock_parameter = nn.Parameter(torch.tensor(1.)) # optimizer raises Value Error if no parameters exist
+
+    def __call__(self, batch:torch.Tensor):
+        Z = []
+        for t, x in enumerate(torch.split(batch,1,1)):
+            delta = Delta(x.squeeze(1))
+            z = pyro.sample(f"z_{t + 1}", delta.to_event(1))
+            Z.append(z)
+        return Z
+
+
+
+

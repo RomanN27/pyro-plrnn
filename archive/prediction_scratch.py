@@ -22,7 +22,7 @@ batch = next(iter(trainer.data_loader))
 #traced_guide = trace(trainer.variational_distribution)
 #traced_guide(batch)
 
-pred = Predictive(trainer.time_series_model,guide= trainer.variational_distribution,num_samples=1000,parallel=True,return_sites=[f"x_{i}" for i in range(525)])
+pred = Predictive(trainer.hidden_markov_model, guide= trainer.variational_distribution, num_samples=1000, parallel=True, return_sites=[f"x_{i}" for i in range(525)])
 num_samples = 1000
 vectorize = pyro.plate(
         "_num_predictive_samples", num_samples )
@@ -35,7 +35,7 @@ with pyro.poutine.trace() as tracer:
     with pyro.plate("_num_predictive_samples", num_samples ):
         trainer.variational_distribution(batch)
 
-replayed_model = pyro.poutine.replay(trainer.time_series_model, trace = tracer.trace)
+replayed_model = pyro.poutine.replay(trainer.hidden_markov_model, trace = tracer.trace)
 
 with pyro.poutine.trace() as tracer:
     with pyro.plate("_num_predictive_samples", num_samples ):
@@ -43,12 +43,12 @@ with pyro.poutine.trace() as tracer:
         z_h = replayed_model(batch)
 
         with scope(prefix = "pred"):
-            trainer.time_series_model.run_over_time_range(z_h, time_range)
+            trainer.hidden_markov_model.run_over_time_range(z_h, time_range)
 #a = tracer.trace.stochastic_nodes[-3:]
 
 #pyro.sample("test",pyro.distributions.Normal(torch.zeros(5),torch.ones(1)), obs= torch.empty(5))
 
-#pred = Predictive(trainer.time_series_model, guide=trainer.variational_distribution,num_samples=69,parallel=True)
+#pred = Predictive(trainer.hidden_markov_model, variational_distribution=trainer.variational_distribution,num_samples=69,parallel=True)
 
 
 def get_values_from_nodes(nodes):

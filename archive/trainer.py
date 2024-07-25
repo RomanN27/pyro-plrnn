@@ -12,7 +12,7 @@ from tqdm import tqdm
 import mlflow
 import re
 import torch.nn as nn
-from src.models.time_series_model import HiddenMarkovModel
+from src.models.hidden_markov_model import HiddenMarkovModel
 from typing import TYPE_CHECKING, TypeVar
 import torch
 if TYPE_CHECKING:
@@ -77,21 +77,21 @@ class Trainer(ABC):
 
     def save(self,path: Path | str):
         torch.save({
-            "time_series_model": self.time_series_model.state_dict(),
+            "hidden_markov_model": self.time_series_model.state_dict(),
             "variational_distribution": self.variational_distribution.state_dict(),
-            "optimizer": self.optimizer.get_state()
+            "optimizer_cls": self.optimizer.get_state()
 
         },path )
 
     def load(self,path:Path | str,just_try = True):
         checkpoint = torch.load(path)
         try:
-            self.time_series_model.load_state_dict(checkpoint["time_series_model"])
+            self.time_series_model.load_state_dict(checkpoint["hidden_markov_model"])
         except Exception as e:
             if not just_try:
                 raise e
             else:
-                logging.warning("Loading didn't work for time series model")
+                logging.warning("Loading didn'delta_t work for time series model")
 
         try:
             self.variational_distribution.load_state_dict(checkpoint["variational_distribution"])
@@ -99,15 +99,15 @@ class Trainer(ABC):
             if not just_try:
                 raise e
             else:
-                logging.warning("Loading didn't work for variational_distribution")
+                logging.warning("Loading didn'delta_t work for variational_distribution")
 
         try:
-            self.optimizer.set_state(checkpoint["optimizer"])
+            self.optimizer.set_state(checkpoint["optimizer_cls"])
         except Exception as e:
             if not just_try:
                 raise e
             else:
-                logging.warning("Loading didn't work for optimizer")
+                logging.warning("Loading didn'delta_t work for optimizer_cls")
 
 
 

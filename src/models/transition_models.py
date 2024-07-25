@@ -1,35 +1,15 @@
-from typing import Any, Protocol, TYPE_CHECKING,Callable, Type
+from typing import TYPE_CHECKING
 
 import torch
 from torch import nn as nn
 import pyro
 from src.models.elementary_components import Diagonal, OffDiagonal
 from lightning import LightningModule
-from uuid import uuid4
+
+from src.models.model_sampler import ModelBasedSampler
+
 if TYPE_CHECKING:
     from pyro.distributions import Distribution
-
-
-random_name = lambda : str(uuid4())
-
-class TransitionModel(Protocol):
-    z_dim: int
-
-    def __call__(self, *args, **kwargs)->tuple:...
-
-class ModelBasedSampler(LightningModule):
-    def __init__(self, transition_model: nn.Module, distribution:Type["Distribution"]):
-        super().__init__()
-        self.model = transition_model
-        self.distribution =  distribution
-
-    def forward(self, z: torch.Tensor, name:str = random_name()) -> torch.Tensor:
-
-        dist_parameters = self.model(z)
-        dist = self.distribution(*dist_parameters) #typecheck error because Distribuiton itself does not implement init however all subclasses do
-        return pyro.sample(name,dist)
-
-
 
 
 class PLRNN(LightningModule):
@@ -130,3 +110,55 @@ if __name__ == "__main__":
     batch_size = 32
     z  =torch.randn(batch_size, z_dim)
     dend(z)
+
+    z_dims = [1,2,3,9]
+    dends = [DendriticConnector(z_dim,10) for z_dim in z_dims]
+    covs = [ConstantCovariance(z_dim) for z_dim in z_dims]
+    plrnnns = [PLRNN(z_dim,dend,cov) for z_dim,dend,cov in zip(z_dims,dends,covs)]
+    transition_samplers = [ModelBasedSampler(plrnn, pyro.distributions.Normal) for plrnn in plrnnns]
+    prod = SkewProduct(*transition_samplers[:-1], target_model=transition_samplers[-1])
+
+    z_0  = torch.normal(1,1,size=(1,z_dims[-1]))
+    z = [z_0]
+    dt = 0.1
+    for _ in range(1000):
+        new_z = prod(z[-1]) *dt + z[-1]
+        z.append(new_z)
+
+
+    Z =torch.cat(z)
+    import matplotlib.pyplot as plt
+    import matplotlib.cm as cm
+    import numpy as np
+
+    trajectory = Z.detach().numpy()
+
+    # Step 3: Plot the 3D trajectory
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Extract x, y, z coordinates
+    x = trajectory[:, -3]
+    y = trajectory[:, -2]
+    z = trajectory[:, -1]
+
+    # Create a colormap based on time
+    colors = cm.viridis(np.linspace(0, 1, len(x)))
+
+    # Plot each segment with a different color
+    for i in range(len(x) - 1):
+        ax.plot(x[i:i + 2], y[i:i + 2], z[i:i + 2], color=colors[i])
+
+    ax.set_xlabel('X axis')
+    ax.set_ylabel('Y axis')
+    ax.set_zlabel('Z axis')
+
+    plt.show()
+
+    plt.plot(trajectory[:, 0])
+    plt.plot(trajectory[:, 1])
+    plt.plot(trajectory[:, 2])
+
+    plt.plot(trajectory[:, -3])
+    plt.plot(trajectory[:,-2])
+    plt.plot(trajectory[:, -1])

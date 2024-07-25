@@ -16,6 +16,16 @@ class LinearObservationModel(LightningModule):
 
         return self.linear(z_t), self.Gamma**2
 
+class IdentityObservationModel(LightningModule):
+    def __init__(self, obs_dim):
+        super().__init__()
+        # initialize the three linear.yaml transformations used in the neural network
+        self.obs_dim = obs_dim
+        self.Gamma = nn.Parameter(torch.empty(obs_dim))
+        nn.init.uniform_(self.Gamma, 0, 0.1 ** 0.5)
+
+    def forward(self, z_t):
+        return z_t[...,:self.obs_dim], torch.ones_like(self.Gamma) * 0.01
 class OrderedLogitModel(LightningModule):
     #Not working yet
     def __init__(self,obs_dim,z_dim):
@@ -52,7 +62,7 @@ class PoissonLink(LightningModule):
 class ListConcat(LightningModule):
 
     def __init__(self,sub_models: dict[str,nn.Module]):
-        #dict since the submodels are passed via hydra. I couldn't figure out how to pass the submodels as a list via the yaml config.
+        #dict since the submodels are passed via hydra. I couldn'delta_t figure out how to pass the submodels as a list via the yaml config.
         # Hence the dict
         super().__init__()
         self.models = nn.ModuleList(sub_models.values())

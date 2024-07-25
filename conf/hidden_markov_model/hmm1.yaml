@@ -1,0 +1,4 @@
+defaults:
+  - transition_sampler: plrnn_normal
+  - observation_sampler: identity_normal
+_target_: src.models.hidden_markov_model.HiddenMarkovModel

@@ -1,0 +1,5 @@
+defaults:
+  - messenger:
+    - annealing
+    - annealing2
+_target_: src.utils.hydra_list.hydra_list

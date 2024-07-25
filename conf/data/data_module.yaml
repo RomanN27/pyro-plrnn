@@ -1,4 +1,0 @@
-_target_: src.data.dataloader.IndicateDataModule
-subject_index: 0
-test_steps: 20
-val_steps: 20

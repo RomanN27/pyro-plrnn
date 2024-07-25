@@ -1,4 +1,4 @@
-from src.lightning_modules import AnnealingModule, TimeSeriesModule
+from src.lightning_module import AnnealingModule, TimeSeriesModule
 import hydra
 from lightning.pytorch.loggers import MLFlowLogger
 
@@ -34,7 +34,7 @@ def main(cfg: DictConfig):
 
 def log_to_mlflow(trainer, cfg):
     with open("model_summary.txt", "w", encoding="utf-8") as f:
-        f.write(str(summary(trainer.time_series_model)))
+        f.write(str(summary(trainer.hidden_markov_model)))
     mlflow.log_artifact("model_summary.txt")
 
     mlflow.set_tag("Training Info", "Just trying mlflow a bit")

@@ -1,5 +1,0 @@
-defaults:
-  observation_model: linear
-  observation_distribution: normal
-
-_target_: src.models.transition_models.ModelBasedSampler

@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import convolve
 
-x_component_observation = lambda trajectory: trajectory[...,0]
+x_component_observation = lambda trajectory: trajectory[...,:1]
 
 class Downsampler:
 
@@ -10,7 +10,7 @@ class Downsampler:
 
     def __call__(self, x: np.ndarray):
         m = x.shape[0] // self.n_of_target_points
-        return x[::m]
+        return x[::m][:self.n_of_target_points]
 
 standard_downsampler = Downsampler(512)
 

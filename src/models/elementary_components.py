@@ -30,3 +30,7 @@ class Bias(LightningModule):
     def __call__(self, z):
         return z + self.b
 
+class ScaleModule(LightningModule):
+    def __init__(self,output_dim: int):
+        self.output_dim = output_dim
+        nn.Linear(hidden_dim, n_time_steps * output_dim ** 2)

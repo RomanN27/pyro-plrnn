@@ -1,6 +1,0 @@
-_target_: src.data.fake_periodic_data.FakeFunctionalData
-fun:
-  _target_: hydra.utils.get_method
-  path: torch._C._VariableFunctions.sin
-T: 50
-ds: 0.1

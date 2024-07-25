@@ -1,4 +1,0 @@
-_target_: src.training.messenger.annealing_messenger.AnnealingScaleMessenger
-beginning_annealing_factor: 0.1
-annealing_epochs: 100
-latent_group_name: "z"

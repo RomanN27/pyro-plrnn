@@ -1,4 +1,4 @@
-from src.models.time_series_model import HiddenMarkovModel
+from src.models.hidden_markov_model import HiddenMarkovModel
 from pyro.poutine import trace, replay
 from pyro import plate
 from typing import Callable
@@ -43,17 +43,17 @@ class Forecaster:
 
         return traced_guide.trace
 
-    def run_model_over_posterior_distribution(self, batch: TensorIterable, guide_trace: Trace, t: int,
+    def run_model_over_posterior_distribution(self, batch: TensorIterable, guide_trace: Trace, delta_t: int,
                                               n_samples: int) -> Trace:
         posterior_model = replay(self.model, trace=guide_trace)
-        t_0 = batch[0].size(0) + 1
-        time_range = range(t_0, t_0 + t)
+        t0 = batch[0].size(0) + 1
+        time_range = range(t0, t0 + delta_t)
 
         with trace() as tracer:
             with plate("_num_predictive_samples", n_samples,dim=-2):
-                z_h = posterior_model(batch)
+                z_t0 = posterior_model(batch)
                 with scope(prefix=self.PRED_PREFIX):
-                    self.model.run_over_time_range(z_h, time_range)
+                    self.model.run_over_time_range(z_prev=z_t0,time_range= time_range)
 
         return tracer.trace
 

@@ -1,6 +1,6 @@
 """
 Calculate the KLz measure for a model with Monte Carlo sampling, or with a variational approximation.
-The attractor geometry is approximated by a GMM with Gaussian distribution at each data point.
+The attractor geometry is approximated by a GMM with Gaussian distribution at each data_loader point.
 """
 import torch as tc
 
@@ -72,7 +72,7 @@ def calc_kl_var(mu_inf, cov_inf, mu_gen, cov_gen):
 
 def kl_between_two_gaussians(mu0, cov0, mu1, cov1):
     """
-    For every time step t in mu0 cov0, calculate the kl to all other time steps in mu1, cov1.
+    For every time step delta_t in mu0 cov0, calculate the kl to all other time steps in mu1, cov1.
     """
     T, n = mu0.shape
 

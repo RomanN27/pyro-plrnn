@@ -1,0 +1,23 @@
+_target_: src.models.guides.RNNGuide
+rnn:
+  _target_: torch.nn.RNN
+  input_size: ${obs_dim}
+  hidden_size: 10
+  nonlinearity: relu
+  batch_first: true
+  bidirectional: false
+  num_layers: 1
+  dropout: 0
+combiner:
+  _target_: src.models.guides.Combiner
+  z_dim: ${z_dim}
+  rnn_dim: ${variational_distribution.rnn.hidden_size}
+initial_state_guide:
+  _target_: src.models.guides.InitialStateGuide
+  z_dim: ${z_dim}
+  input_dim: 512
+  num_components: 5
+
+dist:
+  _target_: hydra.utils.get_class
+  path: pyro.distributions.Normal

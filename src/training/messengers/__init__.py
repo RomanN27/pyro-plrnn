@@ -1,4 +1,4 @@
-from .utils import get_time_stamp
+from ...utils.trace_utils import get_time_stamp
 from .general_replay_messenger import *
 from .observed_batch_messenger import ObservedBatchMessenger
 from .subspace_replay_messenger import SubSpaceReplayMessenger

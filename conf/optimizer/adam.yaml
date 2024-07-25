@@ -1,15 +1,6 @@
-#pyro wrapper for torch optimizers leads to issues since optim_args is compiled as ConfigDict and not a normal dict.
-#Hence the folowing workaround
-optimizer_class:
-  _target_: hydra.utils.get_method
-  path: pyro.optim.ClippedAdam
-beta1: 0.96
-beta2: 0.999
-optim_args:
-  lr: 0.1
-  betas:
-    - ${optimizer.beta1}
-    - ${optimizer.beta2}
-  clip_norm: 10.
-  lrd: 0.99996
-  weight_decay: 2.
+_target_: functools.partial
+_args_:
+  - _target_: hydra.utils.get_class
+    path: torch.optim.Adam
+
+lr: 0.001
