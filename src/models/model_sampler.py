@@ -7,10 +7,11 @@ from lightning import LightningModule
 from pyro.distributions import Distribution
 from torch import nn as nn
 
+
 random_name = lambda : str(uuid4())
 
 
-class ModelBasedSampler(LightningModule):
+class ModelBasedSampler(nn.Module):
     def __init__(self, model: nn.Module, distribution:Type["Distribution"]):
         super().__init__()
         self.model = model

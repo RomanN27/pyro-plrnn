@@ -1,0 +1,2 @@
+_target_: src.training_session_manager.training_resumer.TrainingResumer
+run_id: ${run_id}

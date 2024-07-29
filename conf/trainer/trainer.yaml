@@ -1,0 +1,20 @@
+defaults:
+  - callbacks:
+      - early_stopping
+      - model_check_point
+
+
+_target_: lightning.pytorch.trainer.trainer.Trainer
+enable_checkpointing: true
+num_sanity_val_steps: 0
+accelerator: cpu
+max_epochs: 100
+min_epochs: 15
+
+default_root_dir: C:\Users\roman.nefedov\PycharmProjects\PLRNN_Family_Variational_Inference\lightning_logs
+logger:
+  _target_: lightning.pytorch.loggers.mlflow.MLFlowLogger
+  experiment_name: lightning_logs
+  tracking_uri: http://127.0.0.1:8080
+  run_name: test
+  log_model: true

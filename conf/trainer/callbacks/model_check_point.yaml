@@ -1,0 +1,4 @@
+model_check_point:
+  _target_: lightning.pytorch.callbacks.model_checkpoint.ModelCheckpoint
+  monitor: dsr_loss
+  save_top_k: 1

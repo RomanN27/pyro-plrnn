@@ -19,7 +19,7 @@ D_H = TypeVar("D_H", bound="TorchDistributionMixin")
 
 
 
-class HiddenMarkovModel(LightningModule):
+class HiddenMarkovModel(nn.Module):
 
 
     def __init__(self, transition_sampler: "ModelBasedSampler",

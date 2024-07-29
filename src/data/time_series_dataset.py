@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import Dataset
 
 T = TypeVar("T", bound="TimeSeriesDataset")
-P = ParamSpec("P")
+P = ParamSpec("MuParams")
 DataType = TypeVar("DataType", bound=Iterable)
 
 

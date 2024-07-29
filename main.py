@@ -1,26 +1,21 @@
 import hydra
-from hydra.utils import instantiate
-from lightning.pytorch import Trainer as LightningTrainer
-from lightning.pytorch.loggers import MLFlowLogger
 from omegaconf import DictConfig
+from hydra.utils import instantiate
+from src.training_session_manager import TrainingSessionManager, TrainingStarter
+from src.utils.hydra_list import listify_config
 
-from src.lightning_module import LightningVariationalHiddenMarkov
 
-#mlflow_logger = MLFlowLogger()
 @hydra.main(version_base=None, config_path="conf", config_name="default_config")
 def main(cfg: DictConfig):
-    lightning_module: LightningVariationalHiddenMarkov = instantiate(cfg)
-    from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
+    cfg = listify_config(cfg)
 
+    training_session_manager: TrainingSessionManager = instantiate(cfg.training_session_manager)
 
-    path = r"C:\Users\roman.nefedov\PycharmProjects\PLRNN_Family_Variational_Inference\plots\checkpoints"
-    checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="dsr_loss")
-    early_stopping = EarlyStopping(monitor="dsr_loss", mode="min")
-    callbacks = [checkpoint_callback,early_stopping]
-    lightning_trainer = LightningTrainer(callbacks=callbacks, enable_checkpointing=True, num_sanity_val_steps=0,
-                                         accelerator="cpu", max_epochs=10000, default_root_dir=path,min_epochs=15)
+    trainer, lightning_module, data_module = training_session_manager(cfg)
 
-    lightning_trainer.fit(lightning_module, datamodule=lightning_module.data_loader)
+    trainer.logger.log_hyperparams(cfg)
+
+    trainer.fit(lightning_module, datamodule=data_module)
 
 
 if __name__ == '__main__':

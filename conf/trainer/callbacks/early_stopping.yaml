@@ -1,0 +1,4 @@
+early_stopping:
+  _target_: lightning.pytorch.callbacks.early_stopping.EarlyStopping
+  monitor: dsr_loss
+  mode: min

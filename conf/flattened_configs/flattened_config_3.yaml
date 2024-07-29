@@ -1,46 +1,80 @@
-hidden_markov_model:
-  transition_sampler:
-    model:
-      connectivity_module:
-        _target_: src.models.transition_models.ShallowConnector
+defaults:
+  - trainer: trainer
+
+training_session_manager:
+    _target_: src.training_session_manager.training_starter.TrainingStarter
+
+
+
+lightning_module:
+  hidden_markov_model:
+    transition_sampler:
+      model:
+        _target_: src.models.off_the_shelf_models.plrnns.FixedMeanCenteredCovClippedDendPLRNN
         z_dim: ${z_dim}
-        hidden_dim: 1000
-      _target_: src.models.transition_models.PLRNN
-      z_dim: ${z_dim}
-      cov_module:
-        _target_: src.models.transition_models.ConstantCovariance
+        sigma: 0.1
+        B: 20
+
+
+      distribution:
+        _target_: hydra.utils.get_method
+        path: pyro.distributions.Normal
+      _target_: src.models.model_sampler.ModelBasedSampler
+    observation_sampler:
+      model:
+        _target_: src.models.observation_models.IdentityObservationModel
+        obs_dim: ${obs_dim}
+      distribution:
+        _target_: hydra.utils.get_method
+        path: pyro.distributions.Normal
+      _target_: src.models.model_sampler.ModelBasedSampler
+    initial_sampler:
+      _target_: src.models.model_sampler.ModelBasedSampler
+      model:
+        _target_: src.models.inital_models.SimpleInit
         z_dim: ${z_dim}
-    distribution:
-      _target_: hydra.utils.get_method
-      path: pyro.distributions.Normal
-    _target_: src.models.transition_models.ModelBasedSampler
-  observation_sampler:
-    model:
-      _target_: src.models.observation_models.IdentityObservationModel
-      obs_dim: ${obs_dim}
-    distribution:
-      _target_: hydra.utils.get_method
-      path: pyro.distributions.Normal
-    _target_: src.models.transition_models.ModelBasedSampler
-  initial_sampler:
-    _target_: src.models.transition_models.ModelBasedSampler
-    model:
-      _target_: src.models.inital_models.SimpleInit
-      z_dim: ${z_dim}
 
-    distribution:
-      _target_: hydra.utils.get_method
-      path: pyro.distributions.Normal
+      distribution:
+        _target_: hydra.utils.get_method
+        path: pyro.distributions.Normal
 
 
-  _target_: src.models.hidden_markov_model.HiddenMarkovModel
-variational_distribution:
-  _target_: src.models.guides.SimpleNormalNNGuide
-  n_time_steps: ${chunk_length}
-  input_dim: ${obs_dim}
-  output_dim: ${z_dim}
-  hidden_dim: 1000
-data_loader:
+    _target_: src.models.hidden_markov_model.HiddenMarkovModel
+  variational_distribution:
+    _target_: src.models.guides.TimeSeriesCNN
+    input_dim: ${obs_dim}
+    output_dim: ${z_dim}
+    num_filters: 128
+
+
+  optimizer:
+    _target_: functools.partial
+    _args_:
+    - _target_: hydra.utils.get_class
+      path: torch.optim.Adam
+    lr: 0.001
+  loss:
+    _target_: src.training.losses.TeacherForcingTraceELBO
+    forcing_interval: ${forcing_interval}
+    alpha: 0.1
+    subspace_dim: 1
+  metric_collection:
+    _target_: src.metrics.metrics.ForceMetrics
+    forcing_intervals:
+    - 1
+    - 2
+    - 5
+    - 10
+    - ${forcing_interval}
+    - 1000
+  messengers:
+    _target_: src.training.messengers.annealing_messenger.AnnealingScaleMessenger
+    beginning_annealing_factor: 1
+    annealing_epochs: 100
+    latent_group_name: z
+  _target_: src.lightning_module.LightningVariationalHiddenMarkov
+
+data_module:
   _target_: src.data.dataloader.TimeSeriesDataModule
   dataset:
     _target_: src.data.time_series_dataset.TimeSeriesChunkDataset
@@ -60,31 +94,17 @@ data_loader:
       - 1
     chunk_length: ${chunk_length}
   batch_size: 64
-optimizer:
-  _target_: functools.partial
-  _args_:
-  - _target_: hydra.utils.get_class
-    path: torch.optim.Adam
-  lr: 0.001
-loss:
-  _target_: src.training.losses.TeacherForcingTraceELBO
-  forcing_interval: 5
-  alpha: 0.05
-  subspace_dim: 1
-metric_collection:
-  _target_: src.metrics.metrics.ForceMetrics
-  forcing_intervals:
-  - 1
-  - 2
-  - 5
-  - 10
-  - 1000
-messengers:
-  _target_: src.training.messengers.annealing_messenger.AnnealingScaleMessenger
-  beginning_annealing_factor: 1
-  annealing_epochs: 100
-  latent_group_name: z
-_target_: src.lightning_module.LightningVariationalHiddenMarkov
 obs_dim: 1
-z_dim: 3
-chunk_length: 20
+z_dim: 22
+chunk_length: 200
+forcing_interval: 1
+run_id: fc61c6874f934064a5ad53f1166cceac
+models_to_reload:
+  - hidden_markov_model
+  - variational_distribution
+#check_point_name: epoch=64-step=4160
+
+
+hydra:
+  searchpath:
+    - file://conf

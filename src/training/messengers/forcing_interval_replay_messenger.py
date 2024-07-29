@@ -29,21 +29,13 @@ class ForcingIntervalReplayMessenger(Messenger):
         self.subspace_dim = subspace_dim
         #self.anchor_time_step = np.random.choice(range(self.forcing_interval))
 
-    def is_it_time_to_force(self,msg: Message)->bool:
-        # Nevermind the following
-        # The pyro training pipeline is not decomposing the original time series in various chunks so for each run
-        # we use a different anchor time step to emulate this splitting in chunks
-        t = get_time_stamp(msg)
-
-
-        return not bool((t-self.anchor_time_step) % self.forcing_interval)
 
     def _postprocess_message(self, msg: Message) -> None:
         if not is_group_msg(msg, self.latent_group_name):
             return
 
         t = get_time_stamp(msg)
-        force_boo = t % self.forcing_interval
+        force_boo = (t-1) % self.forcing_interval
 
         if force_boo:
             return
@@ -56,7 +48,7 @@ class ForcingIntervalReplayMessenger(Messenger):
 
 
         updated_value = msg["value"] * self.alpha + (1 - self.alpha) * guide_msg["value"].detach().clone()
-        if t == 0:
+        if t == 1:
             #first step is completely infered
             msg["value"] = updated_value
 

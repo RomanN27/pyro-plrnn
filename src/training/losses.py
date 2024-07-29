@@ -43,6 +43,11 @@ class TeacherForcingTraceELBO(Trace_ELBO):
         dsr_loss = - forced_model_trace.log_prob_sum(site_filter=lambda s, t: "x_" in s)
         return dsr_loss
 
+    def vanilla_loss(self,model,guide,*args,**kwargs):
+        model_trace, guide_trace = self._get_trace(model,guide,args,kwargs)
+
+
+
     def differentiable_loss(self, model, guide, *args, **kwargs):
         vanilla_elbo = super().differentiable_loss(model, guide, *args, **kwargs)
         dsr_loss = self.dsr_loss(model, *args, **kwargs)

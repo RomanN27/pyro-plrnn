@@ -11,7 +11,8 @@ from torch.utils.data import Dataset
 from lightning import LightningModule
 from src.utils.custom_typehint import TensorIterable
 from src.models.model_sampler import ModelBasedSampler
-from pyro.distributions import MultivariateNormal, Delta
+from pyro.distributions import MultivariateNormal, Delta, Normal
+from src.constants import HIDDEN_VARIABLE_NAME as _Z
 class Guide:
     @property
     def data_set(self) -> Dataset:
@@ -76,7 +77,7 @@ class RNNGuide(LightningModule):
         self.dist = dist
         self.h_0 = nn.Parameter(torch.zeros(1, 1, self.rnn.hidden_size))
 
-    def __call__(self, batch: torch.Tensor):
+    def forward(self, batch: torch.Tensor):
         reversed_batch = batch.flip(1)
         pyro.module("dmm", self)
 
@@ -95,14 +96,15 @@ class SimpleNormalNNGuide(LightningModule):
         self.mu_layer = nn.Linear(hidden_dim, n_time_steps * output_dim)
 
 
-    def __call__(self, batch: torch.Tensor):
-        x = self.lin_1(batch.reshape(batch.size(0),-1 ))
+    def forward(self, batch: torch.Tensor):
+        x = self.relu_1(self.lin_1(batch.reshape(batch.size(0),-1 )))
         scale = self.scale_layer(x).reshape(batch.size(0),batch.size(1),self.output_dim,self.output_dim)
         scale_diag = torch.diagonal(scale,dim1=-2,dim2=-1)
         scale_diag = self.softplus(scale_diag)
         scale_diag = torch.diag_embed(scale_diag)
         scale_lower_tria = torch.tril(scale,diagonal=-1)
         scale = scale_lower_tria + scale_diag
+
         mu = self.mu_layer(x).reshape(batch.size(0),batch.size(1),self.output_dim)
         Z =[]
         for t, (mu_t, scale_t) in enumerate(zip(torch.split(mu,1,1), torch.split(scale,1,1))):
@@ -117,11 +119,35 @@ class IdentityGuide(LightningModule):
         super().__init__()
         self.mock_parameter = nn.Parameter(torch.tensor(1.)) # optimizer raises Value Error if no parameters exist
 
-    def __call__(self, batch:torch.Tensor):
+    def forward(self, batch:torch.Tensor):
         Z = []
         for t, x in enumerate(torch.split(batch,1,1)):
             delta = Delta(x.squeeze(1))
             z = pyro.sample(f"z_{t + 1}", delta.to_event(1))
+            Z.append(z)
+        return Z
+
+
+class TimeSeriesCNN(nn.Module):
+    def __init__(self, input_dim, output_dim, kernel_size=3, num_filters=64,sigma:float = 0.1):
+        super(TimeSeriesCNN, self).__init__()
+        self.conv1 = nn.Conv1d(in_channels=input_dim, out_channels=num_filters, kernel_size=kernel_size, padding=kernel_size//2)
+        self.conv2 = nn.Conv1d(in_channels=num_filters, out_channels=output_dim, kernel_size=kernel_size, padding=kernel_size//2)
+        self.relu = nn.ReLU()
+        self.sigma = nn.Parameter(torch.tensor(sigma))
+
+    def forward(self, x):
+        # x shape: [N_batches, N_time_steps, N_dimensions]
+        x = x.permute(0, 2, 1)  # Change to [N_batches, N_dimensions, N_time_steps]
+        x = self.conv1(x)
+        x = self.relu(x)
+        x = self.conv2(x)
+        x = x.permute(0, 2, 1)  # Change back to [N_batches, N_time_steps, N_dimensions_output]
+
+        Z = []
+        for t, x in enumerate(torch.split(x, 1, 1)):
+            normal = Normal(x.squeeze(1), self.sigma)
+            z = pyro.sample(f"{_Z}_{t + 1}", normal.to_event(1))
             Z.append(z)
         return Z
 

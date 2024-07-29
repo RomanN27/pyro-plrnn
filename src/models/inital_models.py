@@ -1,8 +1,7 @@
-from lightning import LightningModule
 import torch.nn as nn
 
 import torch
-class SimpleInit(LightningModule):
+class SimpleInit(nn.Module):
 
     def __init__(self,z_dim: int):
         super().__init__()
@@ -13,4 +12,4 @@ class SimpleInit(LightningModule):
 
     def forward(self,z):
 
-        return self.mu, self.cov
+        return self.mu, self.cov**2

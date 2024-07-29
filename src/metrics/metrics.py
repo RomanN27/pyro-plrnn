@@ -145,21 +145,16 @@ class ForceMetric(Metric):
     def compute(self) -> Any:
         pass
 
-    def plot(self, *_: Any, **__: Any) -> Any:
+    def plot(self, ax = None) -> Any:
+        fig, ax = (None, ax) if ax is not None else plt.subplots()
         observed_trajectory = self.observed_trajectory.numpy()
         # assuming a batchsize of 1:
         observed_trajectory = observed_trajectory[0]
 
         for x in np.split(observed_trajectory, 1, -1):
-            plt.plot(x.reshape(-1))
-
-        #observed_log_prob  = self.observed_log_prob.numpy()
-
-        #plt.plot(observed_log_prob)
-
-        #hidden_log_prob = self.hidden_log_prob.numpy()
-        #plt.plot(hidden_log_prob)
-
+            ax.plot(x.reshape(-1),label = repr(self))
+        ax.legend()
+        return fig, ax
 
 class PowerSpectrumCorrelation(Metric):
     higher_is_better = True
@@ -234,25 +229,22 @@ class ForceMetrics(MetricCollection):
         self.timestamp = datetime.datetime.now().strftime("%H-%M")
         super().__init__(force_metrics,compute_groups=False)
 
+
     def plot(
         self,
         val: Optional[Union[Dict, Sequence[Dict]]] = None,
         ax: Optional[Union[_AX_TYPE, Sequence[_AX_TYPE]]] = None,
         together: bool = False,
     ) -> Sequence[_PLOT_OUT_TYPE]:
-        a = 0
-        forcing_intervals = [f.forcing_interval for f in self.values()]
-        cmap = plt.get_cmap('Set1')
-        #norm = plt.Normalize(min(forcing_intervals), max(forcing_intervals))
-        colors = cmap(forcing_intervals)
-        force_metric: ForceMetric
-        for force_metric in self.values():
+        num_axes = len(self)
+        num_cols = int(np.ceil(np.sqrt(num_axes)))
+        num_rows = int(np.ceil(num_axes / num_cols))
+        fig, axs = plt.subplots(nrows=num_rows, ncols=num_cols,figsize= (20,10))
+        for v,ax in zip(self.values(),axs.reshape(-1).tolist()):
+            v.plot(ax=ax)
+        return fig,axs
 
-            force_metric.plot()
-            path= Path(fr"C:\Users\roman.nefedov\PycharmProjects\PLRNN_Family_Variational_Inference\plots\{self.timestamp}")
-            path.mkdir(exist_ok=True,parents=True)
-            plt.savefig( path / f"{force_metric.forcing_interval}.png")
-            plt.close()
+
 
 class PyroTimeSeriesMetricCollection(MetricCollection):
     def __init__(self,  metrics: list[Metric],n_steps: int, truncate_batch:bool = True, n_samples: int = 1000 ):

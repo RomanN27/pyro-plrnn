@@ -1,8 +1,8 @@
 import torch
 from torch import nn as nn
 from src.models.elementary_components import Bias
-from lightning import LightningModule
-class LinearObservationModel(LightningModule):
+
+class LinearObservationModel(nn.Module):
 
     def __init__(self, obs_dim, z_dim):
         super().__init__()
@@ -16,7 +16,7 @@ class LinearObservationModel(LightningModule):
 
         return self.linear(z_t), self.Gamma**2
 
-class IdentityObservationModel(LightningModule):
+class IdentityObservationModel(nn.Module):
     def __init__(self, obs_dim):
         super().__init__()
         # initialize the three linear.yaml transformations used in the neural network
@@ -26,7 +26,7 @@ class IdentityObservationModel(LightningModule):
 
     def forward(self, z_t):
         return z_t[...,:self.obs_dim], torch.ones_like(self.Gamma) * 0.01
-class OrderedLogitModel(LightningModule):
+class OrderedLogitModel(nn.Module):
     #Not working yet
     def __init__(self,obs_dim,z_dim):
         super().__init__()
@@ -37,7 +37,7 @@ class OrderedLogitModel(LightningModule):
         theta = self.bias
         pass
 
-class MultionomialLink(LightningModule):
+class MultionomialLink(nn.Module):
     def __init__(self,obs_dim,z_dim,n_categories):
         super().__init__()
         self.linear = nn.Linear(z_dim, obs_dim*n_categories)
@@ -51,7 +51,7 @@ class MultionomialLink(LightningModule):
         x = x.view(shape[:-1] + (-1,self.n_categories))
         return self.softmax(x),
 
-class PoissonLink(LightningModule):
+class PoissonLink(nn.Module):
     def __init__(self,obs_dim,z_dim):
         super().__init__()
         self.linear = nn.Linear(z_dim, obs_dim)
@@ -59,7 +59,7 @@ class PoissonLink(LightningModule):
     def forward(self,z_t: torch.Tensor) -> tuple[torch.Tensor]:
         return torch.exp(self.linear(z_t)),
 
-class ListConcat(LightningModule):
+class ListConcat(nn.Module):
 
     def __init__(self,sub_models: dict[str,nn.Module]):
         #dict since the submodels are passed via hydra. I couldn'delta_t figure out how to pass the submodels as a list via the yaml config.
