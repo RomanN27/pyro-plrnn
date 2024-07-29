@@ -1,6 +1,6 @@
 from src.models.model_wrappers.cov_wrapper import create_covariance_wrapper
 from src.models.initializers import npRNNInitialization, dendPLRNNInitialization
-from src.models.normalizers import PLRNNMeanNormalizer
+from src.models.normalizer_mixins import PLRNNMeanNormalizer
 from src.models.cov_modules import ConstantCovariance, FixedCovariance
 from src.models.transition_models.plrnns.plrnns import VanillaPLRNN, dendPLRNN, ClippedDendPLRNN
 
