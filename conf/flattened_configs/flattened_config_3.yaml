@@ -61,7 +61,7 @@ lightning_module:
     alpha: 0.1
     subspace_dim: 1
   metric_collection:
-    _target_: src.metrics.metrics.ForceMetrics
+    _target_: src.metrics.force_metrics.ForceMetrics
     forcing_intervals:
     - 1
     - 2

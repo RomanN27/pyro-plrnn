@@ -9,7 +9,7 @@ from lightning.pytorch.utilities import grad_norm
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from src.constants import OBSERVED_VARIABLE_NAME as X
+from src.utils.variable_group_enum import V
 from src.metrics.metrics import PyroTimeSeriesMetricCollection
 from src.models.forecaster import Forecaster
 from src.models.hidden_markov_model import HiddenMarkovModel
@@ -88,7 +88,7 @@ class LightningVariationalHiddenMarkov(LightningModule):
         #    for msgr in self.messengers:
         #        stack.enter_context(msgr)
 
-        with observe(batch=batch, observation_group_symbol=X):
+        with observe(batch=batch, observation_group_symbol=V.OBSERVED):
             loss, vanilla, dsr = self.loss.differentiable_loss(self.hidden_markov_model, self.variational_distribution, batch)
 
         normalization_factor = len(batch.reshape(-1))

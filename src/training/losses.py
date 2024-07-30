@@ -2,7 +2,7 @@ import torch
 from pyro.infer import Trace_ELBO
 from pyro.poutine import trace, Trace, replay, block
 from src.training.messengers.handlers import force, subspace_replay
-from src.constants import HIDDEN_VARIABLE_NAME as Z
+from src.utils.variable_group_enum import V
 
 class TeacherForcingTraceELBO(Trace_ELBO):
 
@@ -22,7 +22,7 @@ class TeacherForcingTraceELBO(Trace_ELBO):
         )
 
         model_trace = trace(
-            subspace_replay(model, trace=self.guide_trace, subspace_dim=self.subspace_dim,group_name=Z), graph_type="flat"
+            subspace_replay(model, trace=self.guide_trace, subspace_dim=self.subspace_dim,group_name=V.LATENT), graph_type="flat"
         ).get_trace(*args, **kwargs)
 
         model_trace.compute_log_prob()
@@ -32,7 +32,7 @@ class TeacherForcingTraceELBO(Trace_ELBO):
 
     def get_forced_trace(self, model, *args, **kwargs):
         forced_model_trace = trace(
-            force(model, latent_group_name=Z, trace=self.guide_trace, forcing_interval=self.forcing_interval, subspace_dim=self.subspace_dim, alpha=self.alpha)
+            force(model, latent_group_name=V.LATENT, trace=self.guide_trace, forcing_interval=self.forcing_interval, subspace_dim=self.subspace_dim, alpha=self.alpha)
         ).get_trace(*args, **kwargs)
 
         return forced_model_trace

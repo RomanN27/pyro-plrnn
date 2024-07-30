@@ -87,7 +87,7 @@ class ConstantCovShallowPLRNN(ConstantCovarianceMixin, ShallowPLRNN, metaclass=C
 
 class ConstantCovClippedShallowPLRNN(ConstantCovarianceMixin, ClippedShallowPLRNN, metaclass=CombineInitMeta): ...
 
-
+#TODO fix signature
 f = ConstantCovClippedShallowPLRNN(z_dim = 2 , sigma =0.1, hidden_dim = 20)
 
 z = torch.ones(20,2)

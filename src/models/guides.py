@@ -12,7 +12,7 @@ from lightning import LightningModule
 from src.utils.custom_typehint import TensorIterable
 from src.models.model_sampler import ModelBasedSampler
 from pyro.distributions import MultivariateNormal, Delta, Normal
-from src.constants import HIDDEN_VARIABLE_NAME as _Z
+from src.utils.variable_group_enum import V
 class Guide:
     @property
     def data_set(self) -> Dataset:
@@ -147,7 +147,7 @@ class TimeSeriesCNN(nn.Module):
         Z = []
         for t, x in enumerate(torch.split(x, 1, 1)):
             normal = Normal(x.squeeze(1), self.sigma)
-            z = pyro.sample(f"{_Z}_{t + 1}", normal.to_event(1))
+            z = pyro.sample(f"{V.LATENT}_{t + 1}", normal.to_event(1))
             Z.append(z)
         return Z
 

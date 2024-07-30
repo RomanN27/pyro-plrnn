@@ -1,27 +1,17 @@
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union, Sequence, Dict
+from typing import TYPE_CHECKING
 import torch
-import datetime
-from pyro.poutine.trace_messenger import TraceMessenger
-from pyro.poutine.handlers import trace
-from pyro.poutine import Trace
-from torchmetrics import Accuracy
-from torchmetrics.utilities.plot import _AX_TYPE, _PLOT_OUT_TYPE
 
 from src.utils.custom_typehint import TensorIterable
 import random
 from torch import Tensor
 from torchmetrics import MeanSquaredError, Metric, MetricCollection
 from src.metrics.pse import  get_average_spectrum
-import numpy as np
 from src.metrics.klx import klx_metric
 if TYPE_CHECKING:
-    from src.models.hidden_markov_model import HiddenMarkovModel
+    pass
 from src.models.forecaster import Forecaster
-from src.constants import HIDDEN_VARIABLE_NAME as _Z, OBSERVED_VARIABLE_NAME as _X
-from src.training.messengers.handlers import force, observe
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from pathlib import Path
+
+
 class NStepMeanSquaredError(MeanSquaredError):
 
     def __init__(self,n_steps: int, n_samples: int, time_dimension: int = -2, *args,**kwargs):
@@ -50,7 +40,7 @@ class GaussianMaximumMeanDiscrepancy(Metric):
         self.add_state("diff_scalar_product", default=[])
         self.bandwidth = bandwidth
 
-    def update(self, forecaster: Forecaster, x_true: TensorIterable) -> None:
+    def update(self, forecaster: Forecaster, x_true: torch.Tensor) -> None:
 
 
         x_gen = forecaster.model.generate_time_series_from_batch(x_true)
@@ -93,68 +83,6 @@ class GaussianMaximumMeanDiscrepancy(Metric):
 
         return mmd
 
-
-from src.utils.trace_utils import is_group_msg_getter, get_values_from_trace, get_log_prob_from_trace
-
-class ForceMetric(Metric):
-
-    def __repr__(self):
-        return f"ForceMetric[{self.forcing_interval}]"
-    def __init__(self, forcing_interval: int):
-        super().__init__()
-        self.forcing_interval = forcing_interval
-        self.hidden_getter = is_group_msg_getter(_Z)
-        self.obs_getter = is_group_msg_getter(_X)
-        self.add_state("observed_trajectory", default=torch.tensor(0.))
-        self.add_state("observed_log_prob", default=torch.tensor(0.))
-        self.add_state("hidden_log_prob", default=torch.tensor(0.))
-
-
-
-    def update(self, batch: torch.Tensor, hmm: "HiddenMarkovModel",guide) -> None:
-        with torch.no_grad():
-            guide_trace = trace(guide).get_trace(batch)
-
-            trace_ = self.get_step_forced_trace(batch, guide_trace, hmm)
-
-            trace_.compute_log_prob()
-
-            x_probs, x_values, z_probs = self.get_probs_and_values(trace_)
-
-            x_probs = torch.stack(x_probs)
-            x_values = torch.stack(x_values,1)
-            z_probs = torch.stack(z_probs)
-            self.observed_trajectory = x_values
-            self.observed_log_prob = x_probs
-            self.hidden_log_prob = z_probs
-
-    def get_step_forced_trace(self, batch, guide_trace, hmm):
-        trace_ = trace(
-            force(hmm, latent_group_name=_Z, trace=guide_trace, forcing_interval=self.forcing_interval,
-                  subspace_dim=None, alpha=0.)
-        ).get_trace(batch)
-        return trace_
-
-
-    def get_probs_and_values(self, trace: Trace):
-        x_values = get_values_from_trace(trace, self.obs_getter)
-        x_probs = get_log_prob_from_trace(trace, self.obs_getter)
-        z_probs = get_log_prob_from_trace(trace, self.hidden_getter)
-        return x_probs, x_values, z_probs
-
-    def compute(self) -> Any:
-        pass
-
-    def plot(self, ax = None) -> Any:
-        fig, ax = (None, ax) if ax is not None else plt.subplots()
-        observed_trajectory = self.observed_trajectory.numpy()
-        # assuming a batchsize of 1:
-        observed_trajectory = observed_trajectory[0]
-
-        for x in np.split(observed_trajectory, 1, -1):
-            ax.plot(x.reshape(-1),label = repr(self))
-        ax.legend()
-        return fig, ax
 
 class PowerSpectrumCorrelation(Metric):
     higher_is_better = True
@@ -220,30 +148,6 @@ class KLDivergenceObservedSpace(Metric):
 
     def compute(self) -> Tensor:
         return self.kldivergence
-
-class ForceMetrics(MetricCollection):
-
-    def __init__(self, forcing_intervals:list[int]):
-        force_metrics = [ForceMetric(forcing_interval) for forcing_interval in forcing_intervals]
-        force_metrics = {repr(force_metric):force_metric for force_metric in force_metrics}
-        self.timestamp = datetime.datetime.now().strftime("%H-%M")
-        super().__init__(force_metrics,compute_groups=False)
-
-
-    def plot(
-        self,
-        val: Optional[Union[Dict, Sequence[Dict]]] = None,
-        ax: Optional[Union[_AX_TYPE, Sequence[_AX_TYPE]]] = None,
-        together: bool = False,
-    ) -> Sequence[_PLOT_OUT_TYPE]:
-        num_axes = len(self)
-        num_cols = int(np.ceil(np.sqrt(num_axes)))
-        num_rows = int(np.ceil(num_axes / num_cols))
-        fig, axs = plt.subplots(nrows=num_rows, ncols=num_cols,figsize= (20,10))
-        for v,ax in zip(self.values(),axs.reshape(-1).tolist()):
-            v.plot(ax=ax)
-        return fig,axs
-
 
 
 class PyroTimeSeriesMetricCollection(MetricCollection):

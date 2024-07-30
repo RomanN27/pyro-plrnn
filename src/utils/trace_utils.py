@@ -4,7 +4,7 @@ from pyro.poutine.messenger import Message
 import re
 from typing import Literal, Callable
 from functools import partial
-
+from src.utils.variable_group_enum import V
 MsgKey = Literal[
     "type",
     "name",
@@ -76,3 +76,10 @@ def get_log_prob_from_trace(trace: Trace, boo_f: BooleanFunction = lambda x: Tru
     return get_log_prob_from_msgs(get_msgs_from_trace(trace, boo_f))
 
 
+def get_observed_values_from_trace(trace:Trace):
+    observed_msgs =get_group_msgs_from_trace(trace,V.OBSERVED)
+    return get_values_from_msgs(observed_msgs)
+
+def get_hidden_values_from_trace(trace:Trace):
+    latent_msgs= get_group_msgs_from_trace(trace,V.OBSERVED)
+    return get_values_from_msgs(latent_msgs)

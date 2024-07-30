@@ -12,7 +12,7 @@ from lightning import LightningModule
 if TYPE_CHECKING:
     from pyro.distributions import TorchDistributionMixin, TorchDistribution, Distribution
     from src.models.model_sampler import ModelBasedSampler
-from src.constants import HIDDEN_VARIABLE_NAME as Z, OBSERVED_VARIABLE_NAME as X
+from src.utils.variable_group_enum import V
 D_O = TypeVar("D_O", bound="TorchDistributionMixin")
 D_H = TypeVar("D_H", bound="TorchDistributionMixin")
 
@@ -24,7 +24,7 @@ class HiddenMarkovModel(nn.Module):
 
     def __init__(self, transition_sampler: "ModelBasedSampler",
                  observation_sampler: "ModelBasedSampler",
-                 initial_sampler: "ModelBasedSampler",
+                 initial_sampler: "ModelBasedSampler[None]",
                  *args,
                  **kwargs):
         super().__init__(*args, **kwargs)
@@ -34,21 +34,18 @@ class HiddenMarkovModel(nn.Module):
 
 
 
-    def __call__(self, batch: torch.Tensor)-> torch.Tensor:
+    def __call__(self, n_samples: int)-> torch.Tensor:
         pyro.module("hidden_markov_model", self)
 
 
-        t_max = batch.size(1)
-        time_range = range(2, t_max + 1)
+        Z_1 = self.run_first_step(n_samples)
 
-        Z_1 = self.run_first_step(batch)
+        self.run_over_time_range(Z_1, range(2, n_samples + 1))
 
-        self.run_over_time_range(Z_1, time_range)
+    def run_first_step(self, n_samples: int):
 
-    def run_first_step(self, batch: torch.Tensor):
-        n_batches = batch.size(0)
-        with plate("_num_predictive_samples", n_batches, dim=-2):
-            z_1 = self.initial_sampler(batch,name = f"{Z}_1")
+        with plate("_num_predictive_samples", n_samples, dim=-2):
+            z_1 = self.initial_sampler(None,name = f"{V.LATENT}_1")
         self.emit(z_1, 1)
         return z_1
 
@@ -59,7 +56,7 @@ class HiddenMarkovModel(nn.Module):
 
         return z_prev
 
-    def run_step(self, t: int, z_prev: torch.Tensor ):
+    def run_step(self, t: int, z_prev: torch.Tensor )-> torch.Tensor:
         z_t = self.transition(z_prev, t)
 
         self.emit(z_t,t)
@@ -67,18 +64,19 @@ class HiddenMarkovModel(nn.Module):
         return z_t
 
     def transition(self, z_prev: torch.Tensor, t: int):
-        hidden_state_name = f"{Z}_{t}"
+        hidden_state_name = f"{V.LATENT}_{t}"
         z_t = self.transition_sampler(z_prev, hidden_state_name)
         return z_t
 
     def emit(self, z_t: torch.Tensor, t:int):
-        observation_name = f"{X}_{t}"
+        observation_name = f"{V.OBSERVED}_{t}"
         x_t = self.observation_sampler(z_t, observation_name)
         return x_t
 
+
     @classmethod
     def get_observations_from_trace(cls,trace:Trace):
-        filter_observations = lambda pair: pair[0].startswith(X + "_")
+        filter_observations = lambda pair: pair[0].startswith(V.OBSERVED + "_")
 
         obs_nodes = dict(filter(filter_observations, trace.nodes.items()))
         values = [x["value"] for x in obs_nodes.values()]
