@@ -5,7 +5,7 @@ defaults:
   - guide: rnn
   - loss: loss
   - observation_model: linear
-  - transition_model: dendPLRNN
+  - transition_model: _DendPLRNN
   - observation_distribution: normal
   - transition_distribution: normal
   - optimizer: adam

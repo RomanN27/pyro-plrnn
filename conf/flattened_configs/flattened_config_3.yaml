@@ -10,10 +10,12 @@ lightning_module:
   hidden_markov_model:
     transition_sampler:
       model:
-        _target_: src.models.off_the_shelf_models.plrnns.FixedMeanCenteredCovClippedDendPLRNN
+        _target_: src.models.transition_models.plrnns.final_plrnns.ConstantCovClippedShallowPLRNN
         z_dim: ${z_dim}
         sigma: 0.1
-        B: 20
+        hidden_dim: 100
+
+
 
 
       distribution:

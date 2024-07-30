@@ -1,6 +1,7 @@
 import torch
 from torch import nn as nn
-from src.models.elementary_components import Bias
+
+
 
 class LinearObservationModel(nn.Module):
 
@@ -31,7 +32,7 @@ class OrderedLogitModel(nn.Module):
     def __init__(self,obs_dim,z_dim):
         super().__init__()
         self.linear = nn.Linear(z_dim, obs_dim,bias=False)
-        self.bias = Bias(z_dim)
+        self.bias = torch.ones(z_dim)
 
     def forward(self,z_t):
         theta = self.bias

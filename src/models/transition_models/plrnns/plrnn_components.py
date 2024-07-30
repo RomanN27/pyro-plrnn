@@ -1,18 +1,29 @@
+from abc import ABC, abstractmethod
+
 import torch
 from torch import nn as nn
 
-from src.models.elementary_components import OffDiagonal
 
-
-class OffDiagonalConnector(nn.Module):
-
-    def __init__(self,z_dim: int,phi: nn.Module):
+class Diagonal(nn.Module):
+    def __init__(self, z_dim: int):
         super().__init__()
-        self.off_diag = OffDiagonal(z_dim)
-        self.phi = phi
+        self.A_diag = nn.Parameter(torch.empty(z_dim))
 
-    def forward(self,z):
-        return  self.off_diag(self.phi(z))
+    def forward(self, z):
+        return self.A_diag * z
+
+
+class OffDiagonal(nn.Module):
+    def __init__(self, z_dim: int):
+        super().__init__()
+        self.W = nn.Parameter(torch.empty(z_dim, z_dim))
+        self.register_buffer("mask", 1 - torch.eye(z_dim))
+
+    def forward(self, z):
+        return torch.matmul(z, self.W * self.mask)
+
+
+
 
 
 class DendriticPhi(nn.Module):
@@ -32,28 +43,29 @@ class ClippedDendriticPhi(DendriticPhi):
         return (self.relu(z.unsqueeze(-1) - self.H) - self.relu(z.unsqueeze(-1))) @ self.alpha
 
 
-class VanillaConnector(OffDiagonalConnector):
-    def __init__(self,z_dim):
-        super().__init__(z_dim, nn.ReLU())
 
-
-class DendriticConnector(OffDiagonalConnector):
-
-    def __init__(self,z_dim,B):
-        dendritic_phi = DendriticPhi(z_dim,B)
-        super().__init__(z_dim,phi=dendritic_phi)
-
-
-class ClippedDendriticConnector(OffDiagonalConnector):
-
-    def __init__(self, z_dim, B):
-        clipped_dendritic_phi = ClippedDendriticPhi(z_dim, B)
-        super().__init__(z_dim,phi=clipped_dendritic_phi)
-
-
-class ShallowConnector(nn.Module):
+class ShallowPhi(nn.Module):
     def __init__(self,z_dim,hidden_dim):
         super().__init__()
-        self.sequential = nn.Sequential(nn.Linear(z_dim, hidden_dim), nn.ReLU(),nn.Linear(hidden_dim,z_dim, bias=False))
+        self.linear_1 = nn.Linear(z_dim, hidden_dim)
+        self.relu = nn.ReLU()
+        self.z_dim = z_dim
+
     def forward(self, z):
-        return self.sequential(z)
+        return self.relu(self.linear_1(z))[...,:self.z_dim]
+
+class ClippedShallowPhi(ShallowPhi):
+
+    def forward(self,z):
+        #TODO Write doc here
+        x = self.linear_1(z)
+        x_2 =  x - self.linear_1.bias
+        x = self.relu(x)
+        x = x - self.relu(x_2)
+        return x[...,:self.z_dim]
+
+
+
+
+
+

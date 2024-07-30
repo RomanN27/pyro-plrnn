@@ -1,5 +1,5 @@
 defaults:
-  - connectivity_module: ShallowConnector
+  - connectivity_module: ShallowPhi
 
 _target_: src.models.transition_models.PLRNN
 z_dim: ${z_dim}

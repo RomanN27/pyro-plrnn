@@ -1,7 +1,7 @@
 defaults:
   - default_config
   - _self_
-  - override transition_model: shallowPLRNN
+  - override transition_model: _ShallowPLRNN
 
 
 z_dim: 30
