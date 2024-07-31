@@ -83,3 +83,21 @@ class Forecaster:
         all_values = [torch.cat([actual_batch, predicted_batch ], dim =-2) for actual_batch, predicted_batch in zip(actually_observed_list,pred_values.swapaxes(0,1) )]
 
         return all_values
+
+
+if __name__ == '__main__':
+    from omegaconf import OmegaConf
+    from hydra.utils import instantiate
+    from src.models.forecaster import Forecaster
+
+    path = r"/Users/romannefedov/PycharmProjects/pyro-plrnn/conf/flattened_configs/flattened_config_3.yaml"
+
+    with open(path, "r") as f:
+        cfg = OmegaConf.load(f)
+
+    module = instantiate(cfg)
+
+    forecaster: Forecaster = module.lightning_module.forecaster
+    data = module.data_module.dataset[1].unsqueeze(0)
+
+    forecasts = forecaster(data, 100, 100)
