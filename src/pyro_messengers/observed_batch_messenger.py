@@ -1,18 +1,15 @@
 # Copyright (c) 2017-2019 Uber Technologies, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import TYPE_CHECKING, ParamSpec, TypeVar, Callable
+from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
-import pyro
 import torch
-from pyro.poutine.handlers import _make_handler
 from pyro.poutine.messenger import Messenger
-from src.training.messengers import GroupNameFilter
+from src.pyro_messengers import GroupNameFilter
 
 if TYPE_CHECKING:
     from pyro.poutine.runtime import Message
 
-from pyro.distributions import Normal
 from src.utils.trace_utils import get_time_stamp
 
 _P = ParamSpec("_P")

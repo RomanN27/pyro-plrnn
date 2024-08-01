@@ -1,4 +1,3 @@
-from functools import partial
 from typing import Tuple, Literal
 
 from hydra.utils import instantiate
@@ -6,7 +5,7 @@ from lightning import Trainer, LightningModule, LightningDataModule
 from omegaconf import DictConfig, OmegaConf
 
 from src.training_session_manager.training_session_manager import TrainingSessionManager
-from src.lightning_module import LightningVariationalHiddenMarkov
+from src.lightning_modules.variational_lightning_module import LightningVariationalHiddenMarkov
 from src.utils.lightning_utils import update_state_dict
 from src.utils.mlflow_utils import get_config_from_run_id, get_checkpoint_from_run_id
 

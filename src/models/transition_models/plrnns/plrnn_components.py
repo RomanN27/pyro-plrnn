@@ -47,19 +47,19 @@ class ClippedDendriticPhi(DendriticPhi):
 class ShallowPhi(nn.Module):
     def __init__(self,z_dim,hidden_dim):
         super().__init__()
-        self.linear_1 = nn.Linear(z_dim, hidden_dim)
+        self.linear = nn.Linear(z_dim, hidden_dim)
         self.relu = nn.ReLU()
         self.z_dim = z_dim
 
     def forward(self, z):
-        return self.relu(self.linear_1(z))[...,:self.z_dim]
+        return self.relu(self.linear(z))[..., :self.z_dim]
 
 class ClippedShallowPhi(ShallowPhi):
 
     def forward(self,z):
         #TODO Write doc here
-        x = self.linear_1(z)
-        x_2 =  x - self.linear_1.bias
+        x = self.linear(z)
+        x_2 =  x - self.linear.bias
         x = self.relu(x)
         x = x - self.relu(x_2)
         return x[...,:self.z_dim]

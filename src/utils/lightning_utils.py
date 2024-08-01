@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from torch import nn as nn
 
 if TYPE_CHECKING:
-    from src.lightning_module import LightningVariationalHiddenMarkov
+    pass
 
 
 def update_state_dict(lightning_module: nn.Module, state_dict_to_use: dict):

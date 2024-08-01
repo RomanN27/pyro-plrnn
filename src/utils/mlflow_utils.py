@@ -11,7 +11,7 @@ from typing import Optional, TYPE_CHECKING
 import torch
 import urllib
 if TYPE_CHECKING:
-    from src.lightning_module import LightningVariationalHiddenMarkov
+    pass
 
 mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI","http://127.0.0.1:8080"))
 def convert_file_uri_to_path(file_uri: str) -> Path:

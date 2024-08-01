@@ -1,9 +1,7 @@
-from src.training.messengers import ObservedBatchMessenger, SubSpaceReplayMessenger, \
-    ForcingIntervalReplayMessenger
-from typing import TYPE_CHECKING, Dict, Optional, overload, ParamSpec, TypeVar, Callable, Union, Type
+from src.pyro_messengers import ObservedBatchMessenger, SubSpaceReplayMessenger, \
+    ForcingIntervalReplayMessenger, SampleMeanMessenger
+from typing import Optional, overload, ParamSpec, TypeVar, Callable, Union
 from pyro.poutine.handlers import _make_handler
-import functools
-import collections
 import torch
 from pyro.poutine.trace_struct import Trace
 
@@ -129,3 +127,14 @@ def force(fn: Callable[_P, _T],
           alpha: float = 1.,
           subspace_dim: Optional[int] = None) -> Union[Callable[_P, _T], ForcingIntervalReplayMessenger]:
     ...
+
+
+@overload
+def mean(fn: None) ->  ForcingIntervalReplayMessenger:...
+
+@overload
+def mean(fn: Callable[_P, _T]) ->  Callable[_P, _T]:...
+
+
+@_make_handler(SampleMeanMessenger)
+def mean(fn: Optional[Callable[_P, _T]]) -> Union[Callable[_P, _T], ForcingIntervalReplayMessenger]:...

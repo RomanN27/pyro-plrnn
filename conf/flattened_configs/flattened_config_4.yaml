@@ -52,7 +52,7 @@ lightning_module:
         _target_: src.models.transition_models.plrnns.final_plrnns.ConstantCovClippedShallowPLRNN
         z_dim: ${z_dim}
         sigma: 1.
-        hidden_dim: 1000
+        hidden_dim: 100
 
 
 
@@ -90,8 +90,8 @@ lightning_module:
     _target_: functools.partial
     _args_:
     - _target_: hydra.utils.get_class
-      path: torch.optim.Adam
-    lr: 0.001
+      path: torch.optim.RAdam
+    lr: 0.01
   loss:
     _target_: src.training.losses.TeacherForcingTraceELBO
     forcing_interval: ${forcing_interval}
@@ -102,7 +102,7 @@ lightning_module:
     beginning_annealing_factor: 1
     annealing_epochs: 100
     latent_group_name: z
-  _target_: src.lightning_module.LightningVariationalHiddenMarkov
+  _target_: src.lightning_modules.variational_lightning_module.LightningVariationalHiddenMarkov
 data_module:
   _target_: src.data.data_module.ChunkTimeSeriesDataModule
   dataset:
@@ -117,6 +117,9 @@ data_module:
       drift_function:
         _target_: hydra.utils.get_method
         path: src.data.data_simulator.drift_functions.lorentz_drift
+      observation_function:
+        _target_: src.data.data_simulator.observation_functions.Downsampler
+        n_of_target_points: 512
       initial_state:
       - 1
       - 1
@@ -125,7 +128,7 @@ data_module:
   batch_size: 64
 
 
-obs_dim: 1
+obs_dim: 3
 z_dim: 3
 chunk_length: 100
 forcing_interval: 1

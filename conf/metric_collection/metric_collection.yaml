@@ -1,5 +1,0 @@
-_target_: src.metrics.metrics.ForceMetrics
-forcing_intervals: [1,2,5,10,100]
-
-
-

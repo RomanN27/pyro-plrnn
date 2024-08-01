@@ -145,7 +145,7 @@ def get_pdf_from_timeseries(x_gen, x_true, n_bins,smoothing_alpha = 10e-6):
 
 
 def klx_metric(x_gen, x_true, n_bins=30,smoothing_alpha = 10e-6):
-    # plot_kl(x_gen, x_true, n_bins)
+    # plot_kl(x_gen, batch, n_bins)
     p_gen, p_true = get_pdf_from_timeseries(x_gen, x_true, n_bins,smoothing_alpha = smoothing_alpha)
     return kullback_leibler_divergence(p_true, p_gen)
 

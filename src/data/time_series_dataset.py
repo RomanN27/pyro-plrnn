@@ -18,7 +18,7 @@ class _tLocIndexer(Generic[DataType]):
         return self.cls(self.cls.time_slice(item, self.data_set.tensors),**self.data_set.kwargs)
 
 
-class TimeSeriesDataset(ABC, Dataset, Generic[DataType]):
+class TimeSeriesDataset(ABC, Dataset[DataType]):
 
     def __init__(self, tensors: DataType,**kwargs):
         self.tensors = tensors

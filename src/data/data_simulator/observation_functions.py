@@ -16,6 +16,7 @@ standard_downsampler = Downsampler(512)
 
 default_obs = lambda x: standard_downsampler(x_component_observation(x))
 
+
 class HemodynamicResponseFunction:
     def __init__(self, tr=2.0, duration=32.0):
         self.tr = tr

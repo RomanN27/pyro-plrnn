@@ -6,7 +6,7 @@ from omegaconf import DictConfig
 
 from src.training_session_manager.training_session_manager import TrainingSessionManager
 
-from src.lightning_module import LightningVariationalHiddenMarkov
+from src.lightning_modules.variational_lightning_module import LightningVariationalHiddenMarkov
 from src.utils.mlflow_utils import get_config_from_run_id, get_ckpt_path_from_run_id, get_checkpoint_from_run_id
 from functools import partial
 

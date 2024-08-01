@@ -1,7 +1,7 @@
 import torch
 from pyro.infer import Trace_ELBO
-from pyro.poutine import trace, Trace, replay, block
-from src.training.messengers.handlers import force, subspace_replay
+from pyro.poutine import trace
+from src.pyro_messengers.handlers import force, subspace_replay
 from src.utils.variable_group_enum import V
 
 class TeacherForcingTraceELBO(Trace_ELBO):

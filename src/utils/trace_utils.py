@@ -76,10 +76,11 @@ def get_log_prob_from_trace(trace: Trace, boo_f: BooleanFunction = lambda x: Tru
     return get_log_prob_from_msgs(get_msgs_from_trace(trace, boo_f))
 
 
-def get_observed_values_from_trace(trace:Trace):
+def get_observed_values_from_trace(trace:Trace)->list[torch.Tensor]:
     observed_msgs =get_group_msgs_from_trace(trace,V.OBSERVED)
     return get_values_from_msgs(observed_msgs)
 
-def get_hidden_values_from_trace(trace:Trace):
-    latent_msgs= get_group_msgs_from_trace(trace,V.OBSERVED)
+def get_hidden_values_from_trace(trace:Trace)->list[torch.Tensor]:
+    latent_msgs= get_group_msgs_from_trace(trace,V.LATENT)
     return get_values_from_msgs(latent_msgs)
+

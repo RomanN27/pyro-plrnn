@@ -1,6 +1,7 @@
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
-
+from pathlib import Path
+from  typing import Optional
 LIST_KEYS = ["callbacks"]
 
 def listify_config(cfg: DictConfig)->DictConfig:
@@ -43,3 +44,50 @@ def listify_config(cfg: DictConfig)->DictConfig:
             cfg[key] = listify_config(cfg[key])
 
     return cfg
+
+
+def get_module_from_cfg_path(path):
+    cfg = load_cfg(path)
+    return instantiate(cfg)
+
+
+def load_cfg(path):
+    with open(path, "r") as f:
+        cfg = OmegaConf.load(f)
+    return cfg
+
+
+def get_module_from_relative_cfg_path(relative_path):
+    path = get_cfg_path_from_relative_path(relative_path)
+
+    return get_module_from_cfg_path(path)
+
+
+def get_cfg_path_from_relative_path(relative_path):
+    config_path = get_conf_path()
+    path = config_path / relative_path
+    return path
+
+
+def get_conf_path() -> Path:
+    hydra_utils_path = Path(__file__).absolute()
+    config_path = hydra_utils_path.parent.parent.parent / "conf"
+    return config_path
+
+
+def flatten_config(relative_cfg_path, relative_target_directory ="flattened_configs", name: Optional = None):
+    conf_path = get_conf_path()
+    target_directory = conf_path / relative_target_directory
+    target_directory.mkdir(parents=True,exist_ok=True)
+    source_cfg_path = conf_path / relative_cfg_path
+
+    name = name if name is not None else "flattened_" + source_cfg_path.name
+
+    source_cfg = load_cfg(source_cfg_path)
+
+
+    with open(target_directory / name,"w") as f:
+        OmegaConf.save(source_cfg,f)
+
+
+

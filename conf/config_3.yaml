@@ -4,7 +4,7 @@ defaults:
   - data_loader: simple_lorentz
   - optimizer: adam
   - loss: force_elbo
-  - metric_collection: metric_collection
+  - metric_collection: metric_collections
   - messengers:
       - annealing
 

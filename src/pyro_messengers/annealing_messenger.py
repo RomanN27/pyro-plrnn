@@ -1,14 +1,10 @@
 # Copyright (c) 2017-2019 Uber Technologies, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import TYPE_CHECKING, Union
-
-import torch
-
+from typing import TYPE_CHECKING
 
 from pyro.poutine.scale_messenger import ScaleMessenger
-from pyro.poutine.util import is_validation_enabled
-from src.training.messengers import GroupNameFilter
+from src.pyro_messengers import GroupNameFilter
 
 if TYPE_CHECKING:
     from pyro.poutine.runtime import Message

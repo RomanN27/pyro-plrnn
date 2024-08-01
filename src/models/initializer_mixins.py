@@ -39,6 +39,7 @@ class ZeroBiasInitializer:
         self.bias.data.zero_()
 
 
+
 class UniformAlphaInitializer:
     def __init__(self: _DendPLRNN, **kwargs):
         super().__init__(**kwargs)
@@ -68,4 +69,6 @@ class ShallowInitializer:
     def shallow_weights_init(self, m):
         if isinstance(m, nn.Linear):
             torch.nn.init.xavier_uniform_(m.weight)
-            torch.nn.init.zeros_(m.bias)
+            r  = 1 / m.weight.size(0)**0.5
+            m.weight.data.uniform_(-r,r)
+

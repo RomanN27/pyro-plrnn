@@ -146,7 +146,7 @@ class TimeSeriesCNN(nn.Module):
 
         Z = []
         for t, x in enumerate(torch.split(x, 1, 1)):
-            normal = Normal(x.squeeze(1), self.sigma)
+            normal = Normal(x.squeeze(1), torch.abs(self.sigma))
             z = pyro.sample(f"{V.LATENT}_{t + 1}", normal.to_event(1))
             Z.append(z)
         return Z

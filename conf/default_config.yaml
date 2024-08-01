@@ -10,7 +10,7 @@ defaults:
   - transition_distribution: normal
   - optimizer: adam
   - training: train
-  - metriccollection: metric_collection
+  - metriccollection: metric_collections
 
 
 z_dim: 5
