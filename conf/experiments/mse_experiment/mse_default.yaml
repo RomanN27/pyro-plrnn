@@ -1,0 +1,27 @@
+# @package _global_
+
+trainer:
+  logger:
+    experiment_name: mse_experiment
+
+  callbacks:
+    early_stopping:
+      monitor: mse_loss
+    model_check_point:
+      monitor: mse_loss
+
+optim:
+  lr: 10
+
+lightning_module:
+  _target_: src.lightning_modules.mse_lightning_module.LightningMSEHiddenMarkov
+  variational_distribution:
+    _target_: src.models.guides.IdentityGuide
+    z_dim: ${z_dim}
+
+data_module:
+  dataset:
+    chunk_length: 20
+obs_dim: 3
+z_dim: 3
+

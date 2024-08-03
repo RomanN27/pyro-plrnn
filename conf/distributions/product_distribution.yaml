@@ -1,0 +1,10 @@
+defaults:
+  - normal@distributions.normal
+  - categorical@distributions.categorical
+  - poisson@distributions.poisson
+
+
+
+_target_: src.utils.multi_modal_distribution.get_product_distribution
+
+

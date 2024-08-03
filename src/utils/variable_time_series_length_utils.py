@@ -23,7 +23,7 @@ def get_mini_batch_mask(mini_batch, seq_lengths):
     return mask
 
 def collate_fn(data: torch.Tensor):
-    #data_loader.sort(key =len,reverse=True)
+    #data_module.sort(key =len,reverse=True)
     reversed_data = [x.flip(0) for x in data]
     seq_lengths = [len(x) for x in reversed_data]
     padded_sequence = pad_sequence(data,batch_first=True)

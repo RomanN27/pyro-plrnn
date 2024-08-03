@@ -1,0 +1,7 @@
+defaults:
+  - data/simple_lorentz@dataset.tensors
+_target_: src.data.data_module.ChunkTimeSeriesDataModule
+dataset:
+  _target_: src.data.time_series_dataset.TimeSeriesChunkDataset
+  chunk_length: 100
+

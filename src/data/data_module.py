@@ -39,6 +39,13 @@ class TimeSeriesDataModule(LightningDataModule, Generic[DatasetType, DataType]):
 
 class ChunkTimeSeriesDataModule(TimeSeriesDataModule[TimeSeriesChunkDataset, DataType]):
 
+    def __init__(self, train_batch_size = 32,*args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.train_batch_size = train_batch_size
+
+    def train_dataloader(self) -> DataLoader[ DataType]:
+        return DataLoader(self.train, batch_size=self.train_batch_size, collate_fn=self.collate_fn, shuffle=True)
+
     def val_dataloader(self) -> DataLoader[DataType]:
         unwrapped_dataset = VanillaTensorTimeSeriesDataset(self.val.tensors)
         return DataLoader(unwrapped_dataset, batch_size=self.batch_size, collate_fn=self.collate_fn, shuffle=False)

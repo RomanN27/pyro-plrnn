@@ -1,2 +1,0 @@
-_target_: src.data_loader.dataloader.get_data_of_one_subject
-subject_index: 0

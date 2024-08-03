@@ -51,7 +51,7 @@ lightning_module:
       model:
         _target_: src.models.transition_models.plrnns.final_plrnns.ConstantCovClippedShallowPLRNN
         z_dim: ${z_dim}
-        sigma: 1.
+        sigma: .1
         hidden_dim: 100
 
 
@@ -90,8 +90,8 @@ lightning_module:
     _target_: functools.partial
     _args_:
     - _target_: hydra.utils.get_class
-      path: torch.optim.RAdam
-    lr: 0.01
+      path: torch.optim.Adam
+    lr: 0.001
   loss:
     _target_: src.training.losses.TeacherForcingTraceELBO
     forcing_interval: ${forcing_interval}
@@ -120,10 +120,7 @@ data_module:
       observation_function:
         _target_: src.data.data_simulator.observation_functions.Downsampler
         n_of_target_points: 512
-      initial_state:
-      - 1
-      - 1
-      - 1
+
     chunk_length: ${chunk_length}
   batch_size: 64
 
@@ -131,7 +128,7 @@ data_module:
 obs_dim: 3
 z_dim: 3
 chunk_length: 100
-forcing_interval: 1
+forcing_interval: 5
 run_id: fc61c6874f934064a5ad53f1166cceac
 models_to_reload:
   - hidden_markov_model

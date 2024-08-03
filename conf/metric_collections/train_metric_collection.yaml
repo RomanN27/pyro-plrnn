@@ -1,0 +1,4 @@
+defaults:
+  - metrics/sigma_metric@metrics.sigma_metric
+
+_target_: src.metrics.metric_base.MetricCollection

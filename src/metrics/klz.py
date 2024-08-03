@@ -1,6 +1,6 @@
 """
 Calculate the KLz measure for a model with Monte Carlo sampling, or with a variational approximation.
-The attractor geometry is approximated by a GMM with Gaussian distribution at each data_loader point.
+The attractor geometry is approximated by a GMM with Gaussian distribution at each data_module point.
 """
 import torch as tc
 

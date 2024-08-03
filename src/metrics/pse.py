@@ -77,9 +77,9 @@ def plot_spectrum_comparison(s_true, s_gen):
 
 def kernel_smoothen(data, kernel_sigma=1):
     """
-    Smoothen data_loader with Gaussian kernel
+    Smoothen data_module with Gaussian kernel
     @param kernel_sigma: standard deviation of gaussian, kernel_size is adapted to that
-    @return: internal data_loader is modified but nothing returned
+    @return: internal data_module is modified but nothing returned
     """
     kernel = get_kernel(kernel_sigma)
     data_final = data.copy()

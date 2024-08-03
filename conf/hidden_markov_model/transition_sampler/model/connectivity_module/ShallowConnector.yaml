@@ -1,3 +1,0 @@
-_target_: src.models.transition_models.ShallowPhi
-z_dim: ${z_dim}
-hidden_dim: 1000

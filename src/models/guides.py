@@ -115,14 +115,15 @@ class SimpleNormalNNGuide(LightningModule):
 
 
 class IdentityGuide(LightningModule):
-    def __init__(self):
+    def __init__(self,z_dim:int):
         super().__init__()
         self.mock_parameter = nn.Parameter(torch.tensor(1.)) # optimizer raises Value Error if no parameters exist
-
+        self.z_dim = z_dim
     def forward(self, batch:torch.Tensor):
         Z = []
         for t, x in enumerate(torch.split(batch,1,1)):
-            delta = Delta(x.squeeze(1))
+            z_component = x[...,:self.z_dim]
+            delta = Delta(z_component.squeeze(1))
             z = pyro.sample(f"z_{t + 1}", delta.to_event(1))
             Z.append(z)
         return Z

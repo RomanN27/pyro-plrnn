@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import TypeVar, Protocol, Callable, Type, Generic, TYPE_CHECKING, Any
+from typing import TypeVar, Protocol, Callable, Type, Generic, TYPE_CHECKING, Any, Optional
 
 import matplotlib.pyplot as plt
 import torch
@@ -44,10 +44,10 @@ class LightningVariationalHiddenMarkov(LightningModule,
                  variational_distribution: nn.Module,
                  optimizer: Type[Optimizer], loss: ElboLoss,
                  metric_collections: dict[Stage, MetricCollection],
-                 messengers: Messenger, **kwargs):
+                 messengers:Optional[ list[Messenger]]= None) -> None:
         super().__init__()
 
-        self.automatic_optimization = False
+        #self.automatic_optimization = False
         self.hidden_markov_model = hidden_markov_model
         self.variational_distribution = variational_distribution
         self.optimizer_cls = optimizer
@@ -55,7 +55,7 @@ class LightningVariationalHiddenMarkov(LightningModule,
 
         self.metric_collections = metric_collections
         self.forecaster = Forecaster(self.hidden_markov_model, self.variational_distribution)
-        self.messengers = [messengers]
+        self.messengers = messengers if messengers is not None else []
 
     def configure_optimizers(self):
         #return self.optimizer_cls
@@ -125,6 +125,8 @@ class LightningVariationalHiddenMarkov(LightningModule,
         self.log("dsr_loss", dsr, prog_bar=True, on_step=False, on_epoch=True)
         self.log("vanilla_loss", vanilla, prog_bar=True, on_step=False, on_epoch=True)
         self.log("loss", loss, prog_bar=True, on_step=False, on_epoch=True)
+
+        self.update_metric_collection(Stage.train, batch)
 
     def on_train_epoch_end(self) -> None:
         self.log_metric_collection(Stage.train)

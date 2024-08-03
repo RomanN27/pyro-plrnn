@@ -1,4 +1,21 @@
 defaults:
-  - transition_sampler: plrnn_normal
-  - observation_sampler: identity_normal
+    - /models/const_cov_clipped_shallow_plrnn@transition_sampler.model
+    - /models/identity_normal@observation_sampler.model
+    - /distributions/normal@transition_sampler.distribution
+    - /distributions/normal@observation_sampler.distribution
+    - /distributions/normal@initial_sampler.distribution
+
 _target_: src.models.hidden_markov_model.HiddenMarkovModel
+
+transition_sampler:
+    _target_: src.models.model_sampler.ModelBasedSampler
+
+observation_sampler:
+    _target_: src.models.model_sampler.ModelBasedSampler
+
+
+initial_sampler:
+    _target_: src.models.model_sampler.ModelBasedSampler
+    model:
+        _target_: src.models.inital_models.SimpleInit
+        z_dim: ${z_dim}

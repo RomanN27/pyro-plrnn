@@ -1,0 +1,6 @@
+_target_: src.metrics.force_metrics.ForceMetrics
+forcing_intervals:
+  - 2
+  - 5
+  - 10
+  - 1000000 #Run Model without forcing

@@ -1,18 +1,22 @@
 defaults:
   - _self_
-  - data: data_module
-  - module: annealing_module
-  - guide: rnn
-  - loss: loss
-  - observation_model: linear
-  - transition_model: _DendPLRNN
-  - observation_distribution: normal
-  - transition_distribution: normal
-  - optimizer: adam
-  - training: train
-  - metriccollection: metric_collections
+  - trainer: trainer
+  - training_session_manager: starter
+  - hidden_markov_model/hmm1@lightning_module.hidden_markov_model
+  - data_module: lorentz_chunk_data_module
+  - optimizer/adam@lightning_module.optimizer
+  - loss/force_elbo@lightning_module.loss
+  - metric_collections/train_metric_collection@lightning_module.metric_collections.train
+  - metric_collections/val_metric_collection@lightning_module.metric_collections.val
+  - metric_collections/test_metric_collection@lightning_module.metric_collections.test
 
 
-z_dim: 5
-obs_dim: 19
+lightning_module:
+  _target_: src.lightning_modules.variational_lightning_module.LightningVariationalHiddenMarkov
+  variational_distribution: ???
+
+obs_dim: 1
+z_dim: 10
+
+
 

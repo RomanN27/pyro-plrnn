@@ -89,5 +89,60 @@ def flatten_config(relative_cfg_path, relative_target_directory ="flattened_conf
     with open(target_directory / name,"w") as f:
         OmegaConf.save(source_cfg,f)
 
+def make_yaml_file_from_clipboard():
+    #this function reads the clipboard. It expects a class definition as a string in the clipboard
+    # It creates yaml string out of it and saves it to the clipboard
+
+    #read the clipboard
+    import pyperclip
+    text = pyperclip.paste()
+
+    #evaluate the string and save in locals
+    exec(text)
+
+    #get the class module path
+    module_path = locals()["__module__"]
+
+    #get the class name
+    class_name = locals()["__name__"]
+
+    # make it lower case and separate with underscores where there is a capital letter
+
+    def camel_to_snake(name):
+        return "".join([f"_{char.lower()}" if char.isupper() else char for char in name])
+
+    class_name = camel_to_snake(class_name)
+
+    # get the kwargs in the constructor
+
+    import inspect
+    signature = inspect.signature(locals()[class_name].__init__)
+
+    # build the hydra yaml string
+
+    yaml_string = f"_target_: {module_path}.{class_name}\n"
+
+    for key in signature.parameters.keys():
+        if key == "self":
+            continue
+        yaml_string += f"  {key}: \n"
+
+    pyperclip.copy(yaml_string)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

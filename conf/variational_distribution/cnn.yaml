@@ -1,0 +1,4 @@
+_target_: src.models.guides.TimeSeriesCNN
+input_dim: ${obs_dim}
+output_dim: ${z_dim}
+num_filters: 128

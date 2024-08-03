@@ -63,6 +63,12 @@ class Logger(Protocol):
 
 
 class Metric(_Metric, ABC, metaclass=MetricMeta):
+
+    def __repr__(self):
+        return self.__class__.__name__.replace("(" , "").replace(")","")
+
+
+
     @property
     @abstractmethod
     def log_types(self) -> List[MetricLogType]:
@@ -79,21 +85,33 @@ class Metric(_Metric, ABC, metaclass=MetricMeta):
         match log_type:
 
             case MetricLogType.scalar:
-                logger.log_scalar(self.compute(), name, *args, **kwargs)
+                self.log_scalar(args, kwargs, logger, name)
 
             case MetricLogType.png_figure:
-                figure_path = f"plots/{_step}/{name}.png"
-
-                fig, ax = self.plot()
-                logger.log_figure(fig, figure_path, *args, **kwargs)
+                self.log_png_figure(_step, args, kwargs, logger, name)
 
             case MetricLogType.plotly_figure:
-                html = get_plotly_html_string(self.plot())
-                figure_path = f"plots/{_step}/{name}.html"
-                logger.log_text(html, figure_path, *args, **kwargs)
+                self.log_plotly_html(_step, args, kwargs, logger, name)
 
             case MetricLogType.dict:
-                logger.log_dict(self.compute(), name, *args, **kwargs)
+                self.log_dict(args, kwargs, logger, name)
+
+    def log_dict(self, args, kwargs, logger, name):
+        dict_path = f"metrics/{name}.json"
+        logger.log_dict(self.compute(), dict_path, *args, **kwargs)
+
+    def log_plotly_html(self, _step, args, kwargs, logger, name):
+        html = get_plotly_html_string(self.plot())
+        figure_path = f"plots/{_step}/{name}.html"
+        logger.log_text(html, figure_path, *args, **kwargs)
+
+    def log_png_figure(self, _step, args, kwargs, logger, name):
+        figure_path = f"plots/{_step}/{name}.png"
+        fig, ax = self.plot()
+        logger.log_figure(fig, figure_path, *args, **kwargs)
+
+    def log_scalar(self, args, kwargs, logger, name):
+        logger.log_scalar(self.compute(), name, *args, **kwargs)
 
 
 class MetricCollection(_MetricCollection):

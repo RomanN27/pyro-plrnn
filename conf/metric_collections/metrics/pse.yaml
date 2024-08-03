@@ -1,4 +1,3 @@
-pse:
-  _target_: src.metrics.metrics.PowerSpectrumCorrelation
-  smoothing_sigma: 10
-  frequency_cutoff: 20000
+_target_: src.metrics.metrics.PowerSpectrumCorrelation
+smoothing_sigma: 10
+frequency_cutoff: 20000

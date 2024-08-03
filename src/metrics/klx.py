@@ -42,7 +42,7 @@ def plot_kl(x_gen, x_true, n_bins):
     axs[1].imshow(x_true.data.time_series_dataset.T[::-1])
     axs[1].set_xticks(())
     axs[1].set_yticks(())
-    axs[1].set_title('data_loader')
+    axs[1].set_title('data_module')
     plt.show()
 
 
@@ -85,7 +85,7 @@ def calc_histogram(x, n_bins, min_, max_):
     the matrix entry is then the sum of all values at the coordinate
     for reference: https://discuss.pytorch.org/t/histogram-function-in-pytorch/5350/9
     Outliers are discarded!
-    :param x: multidimensional data_loader: shape (N, D) with N number of entries, D number of dims
+    :param x: multidimensional data_module: shape (N, D) with N number of entries, D number of dims
     :param n_bins: number of bins in each dimension
     :param min_: minimum value
     :param max_: maximum value to consider for histogram

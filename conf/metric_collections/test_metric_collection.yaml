@@ -1,0 +1,4 @@
+defaults:
+  - metrics/gaussian_mean_discrepancy@metrics.gaussian_mean_discrepancy
+
+_target_: src.metrics.metric_base.MetricCollection

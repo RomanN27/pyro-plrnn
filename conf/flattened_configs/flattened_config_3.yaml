@@ -102,7 +102,7 @@ lightning_module:
     beginning_annealing_factor: 1
     annealing_epochs: 100
     latent_group_name: z
-  _target_: src.lightning_module.LightningVariationalHiddenMarkov
+  _target_: src.lightning_modules.variational_lightning_module.LightningVariationalHiddenMarkov
 data_module:
   _target_: src.data.data_module.ChunkTimeSeriesDataModule
   dataset:

@@ -27,10 +27,10 @@ class ConstantCovarianceMixin(BaseCovarianceMixin):
     def __init__(self:nn.Module, sigma: float, z_dim: int, **kwargs):
         super().__init__(z_dim=z_dim, **kwargs)
 
-        self.Sigma = nn.Parameter(torch.ones(z_dim))
-        self.initial_sigma = sigma
+        self.sigma = nn.Parameter(torch.tensor(sigma))
         old_forward = self.forward
-        self.forward = self.extend_forward(old_forward, lambda z: self.Sigma ** 2 * self.initial_sigma)
+
+        self.forward = self.extend_forward(old_forward, lambda z:  torch.abs(self.sigma) + 1e-5)
 
 class LinearCovarianceMixin(BaseCovarianceMixin):
     def __init__(self:nn.Module,z_dim: int, **kwargs):

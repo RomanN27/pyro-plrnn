@@ -1,3 +1,2 @@
-mmd:
-  _target_: src.metrics.metrics.GaussianMaximumMeanDiscrepancy
-  bandwidth: 1
+_target_: src.metrics.metrics.GaussianMaximumMeanDiscrepancy
+bandwidth: 1

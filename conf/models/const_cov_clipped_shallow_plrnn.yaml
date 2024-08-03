@@ -1,0 +1,4 @@
+_target_: src.models.transition_models.plrnns.final_plrnns.ConstantCovClippedShallowPLRNN
+z_dim: ${z_dim}
+sigma: .1
+hidden_dim: 100

@@ -1,0 +1,8 @@
+_target_: src.data.data_simulator.data_simulator.DataSimulator.hydra_get_data
+initial_state: [1,1,1]
+drift_function:
+  _target_: hydra.utils.get_method
+  path: src.data.data_simulator.drift_functions.lorentz_drift
+observation_function:
+  _target_: src.data.data_simulator.observation_functions.Downsampler
+  n_of_target_points: 512

@@ -1,0 +1,2 @@
+_target_: src.data_module.dataloader.get_data_of_one_subject
+subject_index: 0

@@ -1,7 +1,0 @@
-_target_: src.data_loader.dataloader.FakeMultiModalDataModule
-n_rois: 19
-n: 1
-T: 512
-n_categories: 4
-n_categorical: 3
-n_poisson: 3

@@ -67,8 +67,12 @@ class DataSimulator:
             self.set(name, value)
         return self
 
-    def get_data(self, combinations: Iterable[dict],
+    def get_data(self, combinations: Optional[Iterable[dict]] = None,
                  collate_fn: Callable[[list[np.array]], torch.Tensor] = torchify_and_stack) -> torch.Tensor:
+
+        if combinations is None:
+            combinations = [{}]
+
         data = []
         for combination in combinations:
             observed_data = self.set_multiple(combination).run_system()
@@ -78,11 +82,12 @@ class DataSimulator:
 
     #convenience function to call this from hydra
     @staticmethod
-    def hydra_get_data(combinations: Iterable[dict],drift_function: Callable[[np.array, float, SP], np.array],
-                 initial_state: list[float], drift_parameters: dict = None, t_range: tuple[float, float] = (0, 50),
-                 dt: float = 0.01, diffusion_function: Callable[[np.array, float], np.array] = simple_noise,
-                 observation_function: Callable[[np.array], np.array] = default_obs
-                 , observation_noise: Callable[[np.array], np.array] = simple_gaussian_noise):
+    def hydra_get_data(drift_function: Callable[[np.array, float, SP], np.array], initial_state: list[float] ,
+                       drift_parameters: dict = None, combinations: Optional[Iterable[dict]] = None,
+                       t_range: tuple[float, float] = (0, 50), dt: float = 0.01,
+                       diffusion_function: Callable[[np.array, float], np.array] = simple_noise,
+                       observation_function: Callable[[np.array], np.array] = default_obs,
+                       observation_noise: Callable[[np.array], np.array] = simple_gaussian_noise):
         sim = DataSimulator(drift_function,initial_state,drift_parameters,t_range,dt,diffusion_function,observation_function,observation_noise)
         return sim.get_data(combinations)
 

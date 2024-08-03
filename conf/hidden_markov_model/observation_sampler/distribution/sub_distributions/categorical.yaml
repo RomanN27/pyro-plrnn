@@ -1,3 +1,0 @@
-multinomial:
-  _target_: hydra.utils.get_method
-  path: pyro.distributions.torch.Categorical

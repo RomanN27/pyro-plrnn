@@ -1,5 +1,0 @@
-defaults:
-  - model: _ShallowPLRNN
-  - distribution: normal
-
-_target_: src.models.transition_models.ModelBasedSampler

@@ -1,4 +1,4 @@
 _target_: src.training.losses.TeacherForcingTraceELBO
 forcing_interval: 2
 alpha: 0.00
-signal_dim: 1
+subspace_dim: ${obs_dim}
