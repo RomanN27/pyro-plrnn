@@ -20,13 +20,11 @@ torchify_and_stack = lambda x: torch.stack([torch.tensor(y,dtype=torch.float32) 
 class DataSimulator:
 
     def __init__(self, drift_function: Callable[[np.array, float, SP], np.array],
-                 initial_state: list[float], drift_parameters: dict = None, t_range: tuple[float, float] = (0, 50),
+                 initial_state: list[float], t_range: tuple[float, float] = (0, 50),
                  dt: float = 0.01, diffusion_function: Callable[[np.array, float], np.array] = simple_noise,
                  observation_function: Callable[[np.array], np.array] = default_obs
                  , observation_noise: Callable[[np.array], np.array] = simple_gaussian_noise):
-        if drift_parameters is None:
-            drift_parameters = {}
-        self.drift_parameters = drift_parameters
+
         self.drift_function = drift_function
         self.initial_state = initial_state
         self.diffusion_function = diffusion_function
@@ -52,13 +50,7 @@ class DataSimulator:
 
     def set(self, name: str, value) -> "DataSimulator":
         # maybe not so clean implementation of the builder pattern
-        if name not in self.__dict__:
-            if name not in self.drift_parameter_names:
-                raise Exception(f"{name} is not valid")
-            else:
-                self.drift_parameters.update({name: value})
-        else:
-            setattr(self, name, value)
+        setattr(self, name, value)
 
         return self
 
@@ -83,12 +75,12 @@ class DataSimulator:
     #convenience function to call this from hydra
     @staticmethod
     def hydra_get_data(drift_function: Callable[[np.array, float, SP], np.array], initial_state: list[float] ,
-                       drift_parameters: dict = None, combinations: Optional[Iterable[dict]] = None,
+                       combinations: Optional[Iterable[dict]] = None,
                        t_range: tuple[float, float] = (0, 50), dt: float = 0.01,
                        diffusion_function: Callable[[np.array, float], np.array] = simple_noise,
                        observation_function: Callable[[np.array], np.array] = default_obs,
                        observation_noise: Callable[[np.array], np.array] = simple_gaussian_noise):
-        sim = DataSimulator(drift_function,initial_state,drift_parameters,t_range,dt,diffusion_function,observation_function,observation_noise)
+        sim = DataSimulator(drift_function,initial_state,t_range,dt,diffusion_function,observation_function,observation_noise)
         return sim.get_data(combinations)
 
 

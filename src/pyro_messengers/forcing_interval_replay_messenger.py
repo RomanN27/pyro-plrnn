@@ -46,11 +46,12 @@ class ForcingIntervalReplayMessenger(Messenger):
         msg["infer"] = guide_msg["infer"]
 
 
-
-        updated_value = msg["value"] * self.alpha + (1 - self.alpha) * guide_msg["value"].detach().clone()
+        updated_value = msg["value"][...,:self.subspace_dim] * self.alpha + (1 - self.alpha) * guide_msg["value"].detach().clone()[...,:self.subspace_dim]
         if t == 1:
             #first step is alwayas forced
-            msg["value"] = updated_value #TODO maybe force it completely?
+            value = msg["value"].detach().clone()
+            value[..., :self.subspace_dim] = updated_value
+            msg["value"] = value
             return
 
-        msg["value"][...,:self.subspace_dim] = updated_value[...,:self.subspace_dim]
+        msg["value"][...,:self.subspace_dim] = updated_value

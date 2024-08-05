@@ -11,7 +11,7 @@ import  matplotlib.pyplot as plt
 from lightning.pytorch.utilities import grad_norm
 
 plt.ioff()
-class LightningMSEHiddenMarkov(BaseLightninglHiddenMarkov):
+class MSETeacherForcing(BaseLightninglHiddenMarkov):
 
     def __init__(self,forcing_interval: int, alpha: float, subspace_dim: Optional[int] = None,
                  lambda_ =  1, n_target_points =-1, *args, **kwargs):
@@ -32,8 +32,6 @@ class LightningMSEHiddenMarkov(BaseLightninglHiddenMarkov):
         return self.optimizer_cls(self.hidden_markov_model.parameters())
 
     def training_step(self, batch: torch.Tensor):
-        optimizer = self.optimizers()
-        optimizer.zero_grad()
         guide_trace = trace(self.variational_distribution).get_trace(batch)
         with mean():
             with force(trace = guide_trace,forcing_interval=self.forcing_interval, latent_group_name=V.LATENT,
@@ -45,7 +43,6 @@ class LightningMSEHiddenMarkov(BaseLightninglHiddenMarkov):
         self.log("mse_loss", loss, prog_bar=True, on_step=True, on_epoch=True)
         self.log("reg_loss", reg, prog_bar=True, on_step=True, on_epoch=True)
         self.update_metric_collection(Stage.train, batch)
-
         return loss + reg
 
 

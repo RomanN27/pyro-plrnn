@@ -4,3 +4,4 @@ forcing_intervals:
   - 5
   - 10
   - 1000000 #Run Model without forcing
+subspace_dim: ${obs_dim}

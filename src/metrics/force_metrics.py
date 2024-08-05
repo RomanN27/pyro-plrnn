@@ -19,9 +19,10 @@ class ForceMetric(Metric):
 
     def __repr__(self):
         return f"ForceMetric[{self.forcing_interval}]"
-    def __init__(self, forcing_interval: int):
+    def __init__(self, forcing_interval: int,subspace_dim:int = None):
         super().__init__()
         self.forcing_interval = forcing_interval
+        self.subspace_dim = subspace_dim
         self.hidden_getter = is_group_msg_getter(V.LATENT)
         self.obs_getter = is_group_msg_getter(V.OBSERVED)
         self.add_state("observed_trajectory", default=torch.tensor(0.))
@@ -50,7 +51,7 @@ class ForceMetric(Metric):
     def get_step_forced_trace(self, batch, guide_trace, hmm):
         trace_ = trace(
             force(hmm, latent_group_name=V.LATENT, trace=guide_trace, forcing_interval=self.forcing_interval,
-                  subspace_dim=None, alpha=0.)
+                  subspace_dim=self.subspace_dim, alpha=0.)
         ).get_trace(batch)
         return trace_
 
@@ -68,7 +69,7 @@ class ForceMetric(Metric):
         fig, ax = (None, ax) if ax is not None else plt.subplots()
         observed_trajectory = self.observed_trajectory.numpy()
         # assuming a batchsize of 1:
-        observed_trajectory = observed_trajectory[0]
+        observed_trajectory = observed_trajectory[0,...,0]
 
         for x in np.split(observed_trajectory, 1, -1):
             ax.plot(x.reshape(-1),label = repr(self))
@@ -78,8 +79,8 @@ class ForceMetric(Metric):
 
 class ForceMetrics(MetricCollection):
 
-    def __init__(self, forcing_intervals:list[int]):
-        force_metrics = [ForceMetric(forcing_interval) for forcing_interval in forcing_intervals]
+    def __init__(self, forcing_intervals:list[int], subspace_dim:int = None):
+        force_metrics = [ForceMetric(forcing_interval,subspace_dim ) for forcing_interval in forcing_intervals]
         force_metrics = {repr(force_metric):force_metric for force_metric in force_metrics}
         self.timestamp = datetime.datetime.now().strftime("%H-%M")
         self.n = 0

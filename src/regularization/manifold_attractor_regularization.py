@@ -7,11 +7,13 @@ class ManifoldAttractorRegularization:
         self.n_of_regularized_latent_states = n_of_target_points
 
     def __call__(self,plrnn_model: PLRNN):
-        diag = plrnn_model.diag.A_diag[...,:self.n_of_regularized_latent_states]
+        #we regularize the last n_of_target_points latent states
+        # because the first latent dimension are used as observed states
+        diag = plrnn_model.diag.A_diag[...,-self.n_of_regularized_latent_states:]
         diag_loss = torch.sum((diag - 1) ** 2)
-        off_diag = plrnn_model.off_diag.W[:self.n_of_regularized_latent_states]
+        off_diag = plrnn_model.off_diag.W[-self.n_of_regularized_latent_states:]
         off_diag_loss = torch.sum(off_diag ** 2)
-        bias = plrnn_model.bias[:self.n_of_regularized_latent_states]
+        bias = plrnn_model.bias[-self.n_of_regularized_latent_states:]
         bias_loss = torch.sum(bias ** 2)
 
         reg_loss = diag_loss + off_diag_loss + bias_loss

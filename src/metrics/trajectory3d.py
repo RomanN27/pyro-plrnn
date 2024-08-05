@@ -17,6 +17,7 @@ class Trajectory3D(Metric):
         super().__init__()
         self.add_state("deterministic_trajectory", default=torch.tensor(0))
         self.add_state("stochastic_trajectories", default=torch.tensor(0))
+        self.add_state("ground_truth", default=torch.tensor(0))
         self.n_time_steps = n_time_steps
         self.n_trajectories = n_trajectories
     def update(self, forecaster: Forecaster, batch: torch.Tensor) -> None:
@@ -27,12 +28,16 @@ class Trajectory3D(Metric):
         observation_forecast_tensor, latent_forecast_tensor = forecaster(batch, self.n_time_steps, self.n_trajectories, probabilistic=True)
         self.stochastic_trajectories = latent_forecast_tensor
 
+        self.ground_truth = batch
+
+
     def compute(self) -> Any:
         pass
 
     def plot(self, ax = None) -> Any:
         deterministic_trajectory = self.deterministic_trajectory.numpy()
         stochastic_trajectories = self.stochastic_trajectories.numpy()
+        ground_truth = self.ground_truth.numpy()
 
         if ax is None:
             fig = plt.figure(figsize=(20, 10))
@@ -46,6 +51,7 @@ class Trajectory3D(Metric):
         # Plot deterministic trajectory
         ax1.plot(deterministic_trajectory[0, :, 0], deterministic_trajectory[0, :, 1],
                  deterministic_trajectory[0, :, 2], label="Deterministic Trajectory")
+        ax1.plot(ground_truth[0, :, 0], ground_truth[0, :, 1], ground_truth[0, :, 2], label="Ground Truth")
         ax1.set_xlabel('X')
         ax1.set_ylabel('Y')
         ax1.set_zlabel('Z')

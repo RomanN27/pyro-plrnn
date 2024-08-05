@@ -14,9 +14,9 @@ from src.models.hidden_markov_model import HiddenMarkovModel, ObservationModelTy
 
 
 class Stage(StrEnum):
-    train = "train"
-    val = "val"
-    test = "test"
+    train = "train_stage"
+    val = "val_stage"
+    test = "test_stage"
 
 
 class ElboLoss(Protocol):
@@ -41,21 +41,23 @@ class BaseLightninglHiddenMarkov(LightningModule):
         self.messengers = messengers if messengers is not None else []
 
     def log_metric_collection(self, stage: Stage):
-        metric_collection = self.metric_collections.get(stage)
-        if metric_collection is not None:
-            metric_collection.log(self.logger, _step = str(self.current_epoch))
-            metric_collection.reset()
+        if stage not in self.metric_collections:
+            return
+
+        self.metric_collections[stage].log(self.logger, _step = str(self.current_epoch))
+        self.metric_collections[stage].reset()
 
     def on_train_epoch_end(self) -> None:
         self.log_metric_collection(Stage.train)
 
     def update_metric_collection(self, stage: Stage, batch: torch.Tensor):
-        metric_collection = self.metric_collections.get(stage)
-        if metric_collection is not None:
-            metric_collection.update(hmm = self.hidden_markov_model,
-                                     batch = batch,
-                                     forecaster = self.forecaster,
-                                     guide = self.variational_distribution)
+        if stage not in self.metric_collections:
+            return
+
+        self.metric_collections[stage].update(hmm = self.hidden_markov_model,
+                                 batch = batch,
+                                 forecaster = self.forecaster,
+                                 guide = self.variational_distribution)
 
     def validation_step(self,batch: torch.Tensor) -> STEP_OUTPUT:
         self.update_metric_collection(Stage.val, batch)

@@ -40,13 +40,16 @@ class Forecaster:
         with mean() if not probabilistic else plate("_num_posterior_samples", n_samples,dim=-2):
                 Z = self.guide(batch)
 
-        last_z = Z[-1]
+                last_z = Z[-1]
+                z_sample  =self.model.initial_sampler(None, name=f"{V.LATENT}_1")
+                z_sample = z_sample.expand(n_samples, *z_sample.size()).clone()
+                z_sample[...,:last_z.size(-1)] = last_z
 
         time_range = get_time_range(batch, n_timesteps_to_forecast)
 
         with trace() as tracer :
             with mean() if not probabilistic else nullcontext():
-                self.model.run_over_time_range(last_z,time_range)
+                self.model.run_over_time_range(z_sample,time_range)
 
         latent_forecast_tensor, observation_forecast_tensor = get_forecast_tensors_from_trace(tracer)
 

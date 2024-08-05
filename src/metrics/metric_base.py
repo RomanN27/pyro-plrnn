@@ -29,6 +29,7 @@ class MetricKwarg(TypedDict, total=False):
 class MetricLogType(StrEnum):
     scalar = "scalar"
     dict = "dict"
+    scalar_dict = "scalar_dict"
     png_figure = "png_figure"
     plotly_figure = "plotly_figure"
 
@@ -95,6 +96,15 @@ class Metric(_Metric, ABC, metaclass=MetricMeta):
 
             case MetricLogType.dict:
                 self.log_dict(args, kwargs, logger, name)
+
+            case MetricLogType.scalar_dict:
+                self.log_scalar_dict(args, kwargs, logger, name)
+
+    def log_scalar_dict(self, args, kwargs, logger, name):
+        dict_ = self.compute()
+        for key,value in dict_.items():
+            logger.log_scalar(value, f"{name}_{key}", *args, **kwargs)
+
 
     def log_dict(self, args, kwargs, logger, name):
         dict_path = f"metrics/{name}.json"

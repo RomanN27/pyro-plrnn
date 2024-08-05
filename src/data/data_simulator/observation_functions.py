@@ -16,6 +16,13 @@ standard_downsampler = Downsampler(512)
 
 default_obs = lambda x: standard_downsampler(x_component_observation(x))
 
+class Slicer:
+    def __init__(self, n_observed_dim: int):
+        self.n_observed_dim = n_observed_dim
+
+    def __call__(self, x: np.ndarray):
+        return x[...,:self.n_observed_dim]
+
 
 class HemodynamicResponseFunction:
     def __init__(self, tr=2.0, duration=32.0):
