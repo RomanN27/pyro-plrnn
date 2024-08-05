@@ -9,7 +9,7 @@ from src.models.transition_models.plrnns.raw_plrnns import _DendPLRNN, _ShallowP
 import inspect
 from functools import wraps
 
-plrnn_default_mixins = [ZeroBiasInitializer, NormalizedPositiveDefiniteInitializer, PLRNNNormalizerMixin]
+plrnn_default_mixins = [ZeroBiasInitializer, NormalizedPositiveDefiniteInitializer]
 import torch
 import inspect
 

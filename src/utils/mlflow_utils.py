@@ -14,8 +14,14 @@ if TYPE_CHECKING:
     pass
 
 mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI","http://127.0.0.1:8080"))
+artifact_folder = os.environ.get("ARTIFACT_FOLDER","mlartifacts")
+
 def convert_file_uri_to_path(file_uri: str) -> Path:
-    return Path(unquote(urlparse(file_uri).path))
+    path_string = unquote(urlparse(file_uri).path)
+    artifact_path = Path(artifact_folder, *path_string.split("/"))
+
+
+    return Path(artifact_path)
 
 
 def get_checkpoint_from_run_id(run_id: str, check_point_name: Optional[str]= None):
@@ -62,13 +68,13 @@ def get_hyperparameters_by_run_id(run_id):
     return converted_hyperparameters
 
 def unflatten_logged_params(hyperparameters: dict):
-    upper_level_keys = [x.split("/")[0] for x in hyperparameters.keys()]
+    upper_level_keys = set([x.split("/")[0] for x in hyperparameters.keys()])
     for upper_level_key in upper_level_keys:
-        relevent_items = {k:v for k,v in hyperparameters.items() if  k.split("/")[0] == upper_level_key}
-        if len(relevent_items)==1:
+        relevant_items = {k:v for k,v in hyperparameters.items() if  k.split("/")[0] == upper_level_key}
+        if len(relevant_items)==1 and "/" not in list(relevant_items)[0]:
             continue
-        unflattened_relevant_item =  {"/".join(x.split("/")[1:]): y for x,y in relevent_items.items()}
-        for r in relevent_items:
+        unflattened_relevant_item =  {"/".join(x.split("/")[1:]): y for x,y in relevant_items.items()}
+        for r in relevant_items:
             hyperparameters.pop(r)
 
         hyperparameters[upper_level_key] = unflatten_logged_params(unflattened_relevant_item)

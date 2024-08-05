@@ -6,7 +6,7 @@ from omegaconf import DictConfig
 
 from src.training_session_manager.training_session_manager import TrainingSessionManager
 
-from src.lightning_modules.variational_lightning_module import LightningVariationalHiddenMarkov
+from src.lightning_modules.variational_lightning_module import VariationalTeacherForcing
 from src.utils.mlflow_utils import get_config_from_run_id, get_ckpt_path_from_run_id, get_checkpoint_from_run_id
 from functools import partial
 
@@ -25,7 +25,7 @@ class TrainingResumer(TrainingSessionManager):
         ckpt_path = get_ckpt_path_from_run_id(self.run_id, check_point_name=check_point_name)
         ckpt = get_checkpoint_from_run_id(self.run_id, check_point_name)
 
-        lightning_module: LightningVariationalHiddenMarkov = module.lightning_module
+        lightning_module: VariationalTeacherForcing = module.lightning_module
         lightning_module.load_state_dict(ckpt["state_dict"])
 
         trainer = module.trainer

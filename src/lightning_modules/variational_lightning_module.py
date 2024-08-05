@@ -1,61 +1,32 @@
-from enum import StrEnum
-from typing import TypeVar, Protocol, Callable, Type, Generic, TYPE_CHECKING, Any, Optional
+from typing import TypeVar, Generic
 
-import matplotlib.pyplot as plt
 import torch
-import torch.nn as nn
-from lightning.pytorch import LightningModule
 from lightning.pytorch.utilities import grad_norm
-from lightning.pytorch.utilities.types import STEP_OUTPUT
-from pyro.poutine.messenger import Messenger
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from src.metrics.metric_base import MetricCollection, Logger
 
-from src.models.forecaster import Forecaster
-from src.models.hidden_markov_model import HiddenMarkovModel
+from src.lightning_modules.base_lightning_module import BaseLightninglHiddenMarkov, Stage
+from src.metrics.metric_base import Logger
+
 from src.pyro_messengers.handlers import observe
 from src.utils.variable_group_enum import V
+from src.training.losses import TeacherForcingTraceELBO
 
-
-from src.data.time_series_dataset import TimeSeriesChunkDataset
-from src.data.data_module import DataType, DatasetType, DataLoader
+from src.data.data_module import DataType, DatasetType
 
 from src.models.hidden_markov_model import LatentModelType, ObservationModelType
 T = TypeVar("T", bound="TimeSeriesModule")
 
 
-class Stage(StrEnum):
-    train = "train"
-    val = "val"
-    test = "test"
-
-
-class ElboLoss(Protocol):
-
-    def differentiable_loss(self, model: Callable, guide: Callable, *args, **kwargs) -> torch.Tensor: ...
-
-
-class LightningVariationalHiddenMarkov(LightningModule,
-                                       Generic[DatasetType, DataType, LatentModelType, ObservationModelType]):
+class VariationalTeacherForcing(BaseLightninglHiddenMarkov,
+                                Generic[DatasetType, DataType, LatentModelType, ObservationModelType]):
 
     logger: Logger
-    def __init__(self, hidden_markov_model: HiddenMarkovModel[ObservationModelType, LatentModelType],
-                 variational_distribution: nn.Module,
-                 optimizer: Type[Optimizer], loss: ElboLoss,
-                 metric_collections: dict[Stage, MetricCollection],
-                 messengers:Optional[ list[Messenger]]= None) -> None:
-        super().__init__()
 
-        #self.automatic_optimization = False
-        self.hidden_markov_model = hidden_markov_model
-        self.variational_distribution = variational_distribution
-        self.optimizer_cls = optimizer
-        self.loss = loss
-
-        self.metric_collections = metric_collections
-        self.forecaster = Forecaster(self.hidden_markov_model, self.variational_distribution)
-        self.messengers = messengers if messengers is not None else []
+    def __init__(self,forcing_interval: int, alpha: float, subspace_dim: int, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.forcing_interval = forcing_interval
+        self.loss = TeacherForcingTraceELBO(forcing_interval,alpha,subspace_dim)
 
     def configure_optimizers(self):
         #return self.optimizer_cls
@@ -75,12 +46,6 @@ class LightningVariationalHiddenMarkov(LightningModule,
         var_lr_scheduler = ReduceLROnPlateau(vae_optimizer, patience=4)
         return [hmm_optimizer, vae_optimizer], [var_lr_scheduler]
 
-    # def validation_step(self, batch: TensorIterable) -> None:
-    #     self.metric_collections.update(self.forecaster, batch)
-    #     results = self.metric_collections.compute()
-    #     results = {k: v.numpy() for k, v in results.items()}
-    #     #self.logger.log_metrics(results)
-    #     self.metric_collections.reset()
 
     def log_grads(self, grad_name: str):
         grads = grad_norm(self, 2)
@@ -127,34 +92,6 @@ class LightningVariationalHiddenMarkov(LightningModule,
         self.log("loss", loss, prog_bar=True, on_step=False, on_epoch=True)
 
         self.update_metric_collection(Stage.train, batch)
-
-    def on_train_epoch_end(self) -> None:
-        self.log_metric_collection(Stage.train)
-    def log_metric_collection(self, stage: Stage):
-        metric_collection = self.metric_collections.get(stage)
-        if metric_collection is not None:
-            metric_collection.log(self.logger, _step = str(self.current_epoch))
-            metric_collection.reset()
-
-    def update_metric_collection(self, stage: Stage, batch: torch.Tensor):
-        metric_collection = self.metric_collections.get(stage)
-        if metric_collection is not None:
-            metric_collection.update(hmm = self.hidden_markov_model,
-                                     batch = batch,
-                                     forecaster = self.forecaster,
-                                     guide = self.variational_distribution)
-    def validation_step(self,batch: torch.Tensor) -> STEP_OUTPUT:
-        self.update_metric_collection(Stage.val, batch)
-
-    def on_validation_end(self) -> None:
-        self.log_metric_collection(Stage.val)
-
-    def test_step(self,batch: torch.Tensor) -> STEP_OUTPUT:
-        torch.set_grad_enabled(True)
-        self.update_metric_collection(Stage.test, batch)
-
-    def on_test_end(self) -> None:
-        self.log_metric_collection(Stage.test)
 
 
 

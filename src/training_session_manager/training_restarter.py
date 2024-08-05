@@ -5,7 +5,7 @@ from lightning import Trainer, LightningModule, LightningDataModule
 from omegaconf import DictConfig, OmegaConf
 
 from src.training_session_manager.training_session_manager import TrainingSessionManager
-from src.lightning_modules.variational_lightning_module import LightningVariationalHiddenMarkov
+from src.lightning_modules.variational_lightning_module import VariationalTeacherForcing
 from src.utils.lightning_utils import update_state_dict
 from src.utils.mlflow_utils import get_config_from_run_id, get_checkpoint_from_run_id
 
@@ -26,7 +26,7 @@ class TrainingRestarter(TrainingSessionManager):
 
         module = instantiate(merged_cfg)
 
-        lightning_module: LightningVariationalHiddenMarkov = module.lightning_module
+        lightning_module: VariationalTeacherForcing = module.lightning_module
         update_state_dict(lightning_module, state_dict_to_use)
 
         trainer: Trainer = module.trainer

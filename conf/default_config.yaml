@@ -5,7 +5,6 @@ defaults:
   - hidden_markov_model/hmm1@lightning_module.hidden_markov_model
   - data_module: lorentz_chunk_data_module
   - optimizer/adam@lightning_module.optimizer
-  - loss/force_elbo@lightning_module.loss
   - metric_collections/train_metric_collection@lightning_module.metric_collections.train
   - metric_collections/val_metric_collection@lightning_module.metric_collections.val
   - metric_collections/test_metric_collection@lightning_module.metric_collections.test

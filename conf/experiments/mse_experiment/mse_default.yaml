@@ -1,5 +1,6 @@
 # @package _global_
-
+defaults:
+  - override /training_session_manager: starter
 trainer:
   logger:
     experiment_name: mse_experiment
@@ -9,9 +10,13 @@ trainer:
       monitor: mse_loss
     model_check_point:
       monitor: mse_loss
+  num_sanity_val_steps: 0
+  check_val_every_n_epoch: 5
+  accelerator: gpu
+
 
 optim:
-  lr: 10
+  lr: 0.0001
 
 lightning_module:
   _target_: src.lightning_modules.mse_lightning_module.LightningMSEHiddenMarkov
@@ -19,9 +24,22 @@ lightning_module:
     _target_: src.models.guides.IdentityGuide
     z_dim: ${z_dim}
 
+  hidden_markov_model:
+    transition_sampler:
+      model:
+        hidden_dim: 1000
+  forcing_interval: 2
+  alpha: 0.01
+
 data_module:
   dataset:
-    chunk_length: 20
+    tensors:
+      observation_function:
+        n_of_target_points: 500
+
+    chunk_length: 100
+  train_batch_size: 16
 obs_dim: 3
 z_dim: 3
-
+run_id: 509bffccb84845aead5ce4eae0e55f74
+models_to_reload: [hidden_markov_model]

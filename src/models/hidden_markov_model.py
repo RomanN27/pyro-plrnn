@@ -39,7 +39,7 @@ class HiddenMarkovModel(nn.Module, Generic[LatentModelType, ObservationModelType
         n_samples = batch.size(0)
         n_time_steps = batch.size(-2)
 
-        pyro.module("hidden_markov_model", self)
+        pyro.module("hidden_markov_model", self) #TODO find out if this is needed
 
 
         Z_1 = self.run_first_step(n_samples)

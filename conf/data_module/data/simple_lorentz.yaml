@@ -5,4 +5,4 @@ drift_function:
   path: src.data.data_simulator.drift_functions.lorentz_drift
 observation_function:
   _target_: src.data.data_simulator.observation_functions.Downsampler
-  n_of_target_points: 512
+  n_of_target_points: 1000
