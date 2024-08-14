@@ -9,20 +9,21 @@ from src.metrics.metric_base import Metric, MetricCollection, MetricLogType, Log
 from torchmetrics.utilities.plot import _AX_TYPE, _PLOT_OUT_TYPE
 from src.utils.variable_group_enum import V
 from src.models.hidden_markov_model import HiddenMarkovModel
-from src.pyro_messengers import force
+from src.pyro_messengers import force, mean
 from src.utils.trace_utils import is_group_msg_getter, get_values_from_trace, get_log_prob_from_trace
-
+import plotly.graph_objects as go
 
 class ForceMetric(Metric):
-    log_types = [MetricLogType.png_figure]
+    log_types = [MetricLogType.plotly_figure]
 
 
     def __repr__(self):
-        return f"ForceMetric[{self.forcing_interval}]"
-    def __init__(self, forcing_interval: int,subspace_dim:int = None):
+        return f"ForceMetric[{self.forcing_interval},{str(self.alpha).replace('.','_')}]"
+    def __init__(self, forcing_interval: int,subspace_dim:int = None, alpha: float = 0.):
         super().__init__()
         self.forcing_interval = forcing_interval
         self.subspace_dim = subspace_dim
+        self.alpha = alpha
         self.hidden_getter = is_group_msg_getter(V.LATENT)
         self.obs_getter = is_group_msg_getter(V.OBSERVED)
         self.add_state("observed_trajectory", default=torch.tensor(0.))
@@ -49,10 +50,10 @@ class ForceMetric(Metric):
             self.hidden_log_prob = z_probs
 
     def get_step_forced_trace(self, batch, guide_trace, hmm):
-        trace_ = trace(
+        trace_ =trace(mean(
             force(hmm, latent_group_name=V.LATENT, trace=guide_trace, forcing_interval=self.forcing_interval,
-                  subspace_dim=self.subspace_dim, alpha=0.)
-        ).get_trace(batch)
+                  subspace_dim=self.subspace_dim, alpha=self.alpha)
+        )).get_trace(batch)
         return trace_
 
 
@@ -65,22 +66,24 @@ class ForceMetric(Metric):
     def compute(self) -> Any:
         pass
 
-    def plot(self, ax = None) -> Any:
-        fig, ax = (None, ax) if ax is not None else plt.subplots()
+    def plot(self, ax=None) -> Any:
+        fig = go.Figure()
         observed_trajectory = self.observed_trajectory.numpy()
         # assuming a batchsize of 1:
-        observed_trajectory = observed_trajectory[0,...,0]
+        observed_trajectory = observed_trajectory[0, ..., 0]
 
         for x in np.split(observed_trajectory, 1, -1):
-            ax.plot(x.reshape(-1),label = repr(self))
-        ax.legend()
-        return fig, ax
+            fig.add_trace(go.Scatter(y=x.reshape(-1), mode='lines', name=repr(self)))
+
+        fig.update_layout(legend=dict(title="Legend"))
+        return fig
 
 
 class ForceMetrics(MetricCollection):
 
-    def __init__(self, forcing_intervals:list[int], subspace_dim:int = None):
-        force_metrics = [ForceMetric(forcing_interval,subspace_dim ) for forcing_interval in forcing_intervals]
+    def __init__(self, forcing_intervals:list[int],alphas: None, subspace_dim:int = None):
+        alphas = [0. for _ in forcing_intervals] if alphas is None else alphas
+        force_metrics = [ForceMetric(forcing_interval,subspace_dim,alpha ) for forcing_interval,alpha in zip(forcing_intervals,alphas)]
         force_metrics = {repr(force_metric):force_metric for force_metric in force_metrics}
         self.timestamp = datetime.datetime.now().strftime("%H-%M")
         self.n = 0
@@ -100,8 +103,3 @@ class ForceMetrics(MetricCollection):
         for v,ax in zip(self.values(),axs.reshape(-1).tolist()):
             v.plot(ax=ax)
         return fig,axs
-
-    def log(self, logger: Logger):
-        fig,ax  = self.plot()
-        self.n += 1
-        logger.log_figure(fig, f"plots/force_metrics_{self.n}.png")

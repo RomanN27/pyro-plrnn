@@ -1,7 +1,7 @@
 from src.models.transition_models.plrnns.plrnn_base import PLRNN
 import torch
 class ManifoldAttractorRegularization:
-
+    #doesnt make sense for plrnns if there is not external input
     def __init__(self, lambda_: float, n_of_target_points: int):
         self.lambda_ = lambda_
         self.n_of_regularized_latent_states = n_of_target_points
@@ -9,7 +9,7 @@ class ManifoldAttractorRegularization:
     def __call__(self,plrnn_model: PLRNN):
         #we regularize the last n_of_target_points latent states
         # because the first latent dimension are used as observed states
-        diag = plrnn_model.diag.A_diag[...,-self.n_of_regularized_latent_states:]
+        diag = plrnn_model.diag.A_diag[-self.n_of_regularized_latent_states:]
         diag_loss = torch.sum((diag - 1) ** 2)
         off_diag = plrnn_model.off_diag.W[-self.n_of_regularized_latent_states:]
         off_diag_loss = torch.sum(off_diag ** 2)

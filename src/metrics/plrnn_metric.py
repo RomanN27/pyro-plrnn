@@ -58,7 +58,7 @@ class PLRNNMetric(Metric):
     def build_heatmap(self):
         W = self.off_diag.detach().clone()
         W[torch.eye(len(W)).bool()] = 0
-        fig = px.imshow(W.tolist())
+        fig = px.imshow(W.tolist()[::-1])
         return fig
 
     def build_table(self):

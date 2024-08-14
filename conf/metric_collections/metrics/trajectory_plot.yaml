@@ -1,3 +1,3 @@
 _target_: src.metrics.trajectory3d.Trajectory3D
-n_time_steps: 100
+n_time_steps: 1000
 n_trajectories: 10

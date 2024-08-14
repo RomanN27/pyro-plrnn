@@ -1,6 +1,6 @@
 defaults:
   - metrics/force_metrics@metrics.force_metrics
-  #- metrics/trajectory_plot@metrics.trajectory_plot
+  - metrics/trajectory_plot@metrics.trajectory_plot
   #- metrics/gradient_plot@metrics.gradient_plot
   - metrics/plrnn_metric@metrics.plrnn_metric
 

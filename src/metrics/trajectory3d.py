@@ -3,6 +3,8 @@ from typing import Any
 from src.metrics.metric_base import Metric, MetricLogType
 
 from src.models.forecaster import Forecaster
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from src.models.hidden_markov_model import HiddenMarkovModel
 
@@ -11,7 +13,7 @@ import matplotlib.pyplot as plt
 
 import torch
 class Trajectory3D(Metric):
-    log_types  = [MetricLogType.png_figure]
+    log_types  = [MetricLogType.plotly_figure]
 
     def __init__(self, n_time_steps: int = 20, n_trajectories: int = 1) -> None:
         super().__init__()
@@ -39,30 +41,57 @@ class Trajectory3D(Metric):
         stochastic_trajectories = self.stochastic_trajectories.numpy()
         ground_truth = self.ground_truth.numpy()
 
-        if ax is None:
-            fig = plt.figure(figsize=(20, 10))
-            ax1 = fig.add_subplot(121, projection='3d')
-            ax2 = fig.add_subplot(122, projection='3d')
-        else:
-            fig = ax.get_figure()
-            ax1 = ax
-            ax2 = fig.add_subplot(122, projection='3d')
+        fig = make_subplots(rows=1, cols=2, specs=[[{'type': 'scatter3d'}, {'type': 'scatter3d'}]])
 
         # Plot deterministic trajectory
-        ax1.plot(deterministic_trajectory[0, :, 0], deterministic_trajectory[0, :, 1],
-                 deterministic_trajectory[0, :, 2], label="Deterministic Trajectory")
-        ax1.plot(ground_truth[0, :, 0], ground_truth[0, :, 1], ground_truth[0, :, 2], label="Ground Truth")
-        ax1.set_xlabel('X')
-        ax1.set_ylabel('Y')
-        ax1.set_zlabel('Z')
-        ax1.legend()
+        fig.add_trace(
+            go.Scatter3d(
+                x=deterministic_trajectory[0, :, 0],
+                y=deterministic_trajectory[0, :, 1],
+                z=deterministic_trajectory[0, :, 2],
+                mode='lines',
+                name='Deterministic Trajectory'
+            ),
+            row=1, col=1
+        )
+
+        fig.add_trace(
+            go.Scatter3d(
+                x=ground_truth[0, :, 0],
+                y=ground_truth[0, :, 1],
+                z=ground_truth[0, :, 2],
+                mode='lines',
+                name='Ground Truth',
+                opacity=0.5
+            ),
+            row=1, col=1
+        )
 
         # Plot stochastic trajectories
         for trajectory in stochastic_trajectories:
-            ax2.plot(trajectory[0, :, 0], trajectory[0, :, 1], trajectory[0, :, 2], alpha=0.5)
-        ax2.set_xlabel('X')
-        ax2.set_ylabel('Y')
-        ax2.set_zlabel('Z')
+            fig.add_trace(
+                go.Scatter3d(
+                    x=trajectory[0, :, 0],
+                    y=trajectory[0, :, 1],
+                    z=trajectory[0, :, 2],
+                    mode='lines',
+                    opacity=0.5
+                ),
+                row=1, col=2
+            )
 
-        return fig, ax
+        fig.update_layout(
+            scene=dict(
+                xaxis_title='X',
+                yaxis_title='Y',
+                zaxis_title='Z'
+            ),
+            scene2=dict(
+                xaxis_title='X',
+                yaxis_title='Y',
+                zaxis_title='Z'
+            )
+        )
+
+        return fig
 

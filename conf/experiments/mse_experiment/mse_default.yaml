@@ -3,6 +3,8 @@ defaults:
   - override /training_session_manager: starter
 
 trainer:
+  max_epochs: 1000
+  min_epochs: 400
   logger:
     experiment_name: mse_experiment
 
@@ -15,10 +17,11 @@ trainer:
   check_val_every_n_epoch: 5
 
 
-optim:
-  lr: 0.0001
+
 
 lightning_module:
+  optimizer:
+    lr: 0.001
   _target_: src.lightning_modules.mse_lightning_module.MSETeacherForcing
   variational_distribution:
     _target_: src.models.guides.IdentityGuide
@@ -27,9 +30,9 @@ lightning_module:
   hidden_markov_model:
     transition_sampler:
       model:
-        hidden_dim: 1000
-  forcing_interval: 2
-  alpha: 0.01
+        hidden_dim: 100
+  forcing_interval: 10
+  alpha: .01
   lambda_: 0
   n_target_points: 3
   subspace_dim: ${obs_dim}
@@ -40,11 +43,11 @@ data_module:
       _target_: src.data.data_simulator.lorentz_data_simulators.LorenzSimulator.hydra_get_data
       initial_state: [1, 1, 1]
       n_observed_dim: ${obs_dim}
-      sampling_length: 600
+      sampling_length: 1000
 
-    chunk_length: 100
+    chunk_length: 120
   train_batch_size: 16
-obs_dim: 1
+obs_dim: 3
 z_dim: 10
-run_id: 509bffccb84845aead5ce4eae0e55f74
+run_id: 8212043b80ca4a7aba31588ed807e8c0
 models_to_reload: [hidden_markov_model]

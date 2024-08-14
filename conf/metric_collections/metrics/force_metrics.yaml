@@ -1,7 +1,16 @@
 _target_: src.metrics.force_metrics.ForceMetrics
 forcing_intervals:
-  - 2
-  - 5
-  - 10
-  - 1000000 #Run Model without forcing
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+alphas:
+  - 0.
+  - 0.1
+  - 0.95
+  - 0.975
+  - 0.99
+  - 1.
 subspace_dim: ${obs_dim}

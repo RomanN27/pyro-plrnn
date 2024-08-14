@@ -1,7 +1,7 @@
 from src.models.cov_mixins import FixedCovarianceMixin, ConstantCovarianceMixin
 from src.models.initializer_mixins import (ShallowInitializer, UniformAlphaInitializer, UniformThresholdHInitializer,
                                            NormalizedPositiveDefiniteInitializer, ZeroBiasInitializer)
-
+from src.utils.mixin_utils import get_nested_signature
 from src.models.normalizer_mixins import PLRNNNormalizerMixin
 from src.models.transition_models.plrnns.raw_plrnns import _DendPLRNN, _ShallowPLRNN, _ClippedDendPLRNN, \
     _ClippedShallowPLRNN
@@ -12,29 +12,9 @@ from functools import wraps
 plrnn_default_mixins = [ZeroBiasInitializer, NormalizedPositiveDefiniteInitializer]
 import torch
 import inspect
+from copy import deepcopy
 
 
-class CombineInitMeta(type):
-    def __new__(cls, name, bases, class_dict):
-        init_params = []
-        for base in bases:
-            if hasattr(base, '__init__'):
-                sig = inspect.signature(base.__init__)
-                for param in sig.parameters.values():
-                    if param.name not in {'self', 'args', 'kwargs'}:
-                        init_params.append(param)
-
-        # Remove duplicates while preserving order
-        seen = set()
-        init_params = [p for p in init_params if p.name not in seen and not seen.add(p.name)]
-
-        # Create a new __init__ with combined parameters
-        init_sig = inspect.Signature(init_params)
-
-        new_cls = type.__new__(cls, name, bases, class_dict)
-        new_cls.__init__.__signature__ = init_sig
-
-        return new_cls
 
 
 dend_default_mixins = [UniformAlphaInitializer, UniformThresholdHInitializer]
@@ -42,49 +22,69 @@ dend_default_mixins = [UniformAlphaInitializer, UniformThresholdHInitializer]
 
 class DendPLRNN(*plrnn_default_mixins,
                 *dend_default_mixins,
-                _DendPLRNN,
-                metaclass=CombineInitMeta): ...
+                _DendPLRNN): ...
 
 
 class ClippedDendPLRNN(*plrnn_default_mixins,
                        *dend_default_mixins,
-                       _ClippedDendPLRNN,
-                       metaclass=CombineInitMeta): ...
+                       _ClippedDendPLRNN): ...
 
 
 class ShallowPLRNN(*plrnn_default_mixins,
                    ShallowInitializer,
-                   _ShallowPLRNN,
-                   metaclass=CombineInitMeta): ...
+                   _ShallowPLRNN): ...
 
 
 class ClippedShallowPLRNN(*plrnn_default_mixins,
                           ShallowInitializer,
-                          _ClippedShallowPLRNN,
-                          metaclass=CombineInitMeta): ...
+                          _ClippedShallowPLRNN): ...
 
 
-class FixedCovDendPLRNN(FixedCovarianceMixin, DendPLRNN, metaclass=CombineInitMeta): ...
+class FixedCovDendPLRNN(FixedCovarianceMixin, DendPLRNN): ...
 
 
-class FixedCovClippedDendPLRNN(FixedCovarianceMixin, ClippedDendPLRNN, metaclass=CombineInitMeta): ...
+class FixedCovClippedDendPLRNN(FixedCovarianceMixin, ClippedDendPLRNN): ...
 
 
-class FixedCovShallowPLRNN(FixedCovarianceMixin, ShallowPLRNN, metaclass=CombineInitMeta): ...
+class FixedCovShallowPLRNN(FixedCovarianceMixin, ShallowPLRNN): ...
 
 
-class FixedCovClippedShallowPLRNN(FixedCovarianceMixin, ClippedShallowPLRNN, metaclass=CombineInitMeta): ...
+class FixedCovClippedShallowPLRNN(FixedCovarianceMixin, ClippedShallowPLRNN): ...
 
 
-class ConstantCovDendPLRNN(ConstantCovarianceMixin, DendPLRNN, metaclass=CombineInitMeta): ...
+class ConstantCovDendPLRNN(ConstantCovarianceMixin, DendPLRNN): ...
 
 
-class ConstantCovClippedDendPLRNN(ConstantCovarianceMixin, ClippedDendPLRNN, metaclass=CombineInitMeta): ...
+class ConstantCovClippedDendPLRNN(ConstantCovarianceMixin, ClippedDendPLRNN): ...
 
 
-class ConstantCovShallowPLRNN(ConstantCovarianceMixin, ShallowPLRNN, metaclass=CombineInitMeta): ...
+class ConstantCovShallowPLRNN(ConstantCovarianceMixin, ShallowPLRNN): ...
 
 
-class ConstantCovClippedShallowPLRNN(ConstantCovarianceMixin, ClippedShallowPLRNN, metaclass=CombineInitMeta): ...
+class ConstantCovClippedShallowPLRNN(ConstantCovarianceMixin, ClippedShallowPLRNN): ...
 
 #TODO fix signature
+
+def build_plrnn_with_mixins(cls, *mixins, name : str = None):
+
+    class NewClass(cls, *mixins):
+        @classmethod
+        def get_signature(cls):
+            return get_nested_signature(cls)
+
+    if name is not None:
+        NewClass.__name__ = name
+        NewClass.__qualname__ = name
+
+
+    return NewClass
+
+#we make a decorator out of it
+
+def attach_mixins(*mixins):
+    def decorator(cls):
+        name = cls.__name__
+        return build_plrnn_with_mixins(cls,*mixins,name=name)
+
+    return decorator
+
