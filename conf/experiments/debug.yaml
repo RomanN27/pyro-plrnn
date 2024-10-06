@@ -1,12 +1,12 @@
 # @package _global_
 defaults:
   - override /training_session_manager: starter
+  - override /trainer/logger: print_logger
 
 trainer:
-  max_epochs: 1000
-  min_epochs: 400
+  max_epochs: 1
   logger:
-    experiment_name: mse_experiment
+    _target_: src.metrics.logger.PrintLogger
 
   callbacks:
     early_stopping:
@@ -32,7 +32,7 @@ lightning_module:
   hidden_markov_model:
     transition_sampler:
       model:
-        hidden_dim: 100
+        hidden_dim: ${z_dim}
   forcing_interval: 10
   alpha: .01
   lambda_: 0
@@ -50,6 +50,6 @@ data_module:
     chunk_length: 120
   train_batch_size: 16
 obs_dim: 3
-z_dim: 10
+z_dim: 3
 run_id: 8212043b80ca4a7aba31588ed807e8c0
 models_to_reload: [hidden_markov_model]

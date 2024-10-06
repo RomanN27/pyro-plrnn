@@ -1,0 +1,5 @@
+logger:
+  _target_: src.metrics.logger.MLFlowLogger
+  experiment_name: lightning_logs
+  tracking_uri: http://127.0.0.1:8080
+  log_model: true

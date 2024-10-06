@@ -24,27 +24,34 @@ class GaussianMaximumMeanDiscrepancy(Metric):
 
         empty_batch = torch.empty(n_samples, n_time_steps, batch.size(-1))
 
-
-
         _, x_gen = hmm.get_history(empty_batch)
 
-        x_gen_flatten = x_gen.flatten(end_dim=-2)
-        x_true_flatten = batch.flatten(end_dim=-2)
+        X = x_gen.flatten(end_dim=-2)
+        Y = batch.flatten(end_dim=-2)
 
-        mmd = self.kernel(self.get_scalar_prod(x_gen_flatten,x_true_flatten)).mean()
+        xx, yy, zz = torch.mm(X, X.t()), torch.mm(Y, Y.t()), torch.mm(X, Y.t())
+        rx = (xx.diag().unsqueeze(0).expand_as(xx))
+        ry = (yy.diag().unsqueeze(0).expand_as(yy))
+
+        dxx = rx.t() + rx - 2. * xx  # Used for A in (1)
+        dyy = ry.t() + ry - 2. * yy  # Used for B in (1)
+        dxy = rx.t() + ry - 2. * zz  # Used for C in (1)
+
+
+        k_XX = self.kernel(dxx)
+        k_XY = self.kernel(dxy)
+        k_YY = self.kernel(dyy)
+
+        m = X.size(0)
+        norming_factor = m * (m - 1)
+
+        mmd = k_XX.sum() / norming_factor + k_YY.sum() / norming_factor - 2 * k_XY.mean()
 
         p = 1/(self.n_times_updated + 1)
         self.mmd = (1-p) * self.mmd + p * mmd
 
         self.n_times_updated += 1
 
-
-    def get_scalar_prod(self, X, Y):
-        XX = (X**2).sum(1)
-        YY = (Y**2).sum(1)
-        XY = X @ Y.T
-        diff_scalar_product = XX.reshape(-1,1) - 2 * XY.T + YY.reshape(1, -1)
-        return diff_scalar_product
 
 
     def kernel(self,x:torch.Tensor):

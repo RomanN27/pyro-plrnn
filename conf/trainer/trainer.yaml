@@ -2,6 +2,7 @@ defaults:
   - callbacks:
       - early_stopping
       - model_check_point
+  - logger: mlflow_logger
 
 
 _target_: lightning.pytorch.trainer.trainer.Trainer
