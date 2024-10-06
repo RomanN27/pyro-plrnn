@@ -1,0 +1,26 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "MSE Experiment",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "cwd": "/zi/home/roman.nefedov/pyro-plrnn",
+            "console": "integratedTerminal",
+            "args": ["-m",
+                "+experiments=mse_experiment/mse_default",
+                "trainer.logger.tracking_uri=http://127.0.0.1:8080",
+                "z_dim=5,10,20",
+                "lightning_module.hidden_markov_model.transition_sampler.model.hidden_dim=100,500,1000",
+                "hydra/launcher=joblib"
+            ],
+            "env":{
+                "HYDRA_FULL_ERROR":"1"
+            }
+        }
+    ]
+}

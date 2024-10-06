@@ -12,8 +12,6 @@ max_epochs: 100
 min_epochs: 10
 check_val_every_n_epoch: 5
 inference_mode: false
-
-default_root_dir: C:\Users\roman.nefedov\PycharmProjects\PLRNN_Family_Variational_Inference\lightning_logs
 logger:
   _target_: src.metrics.logger.MLFlowLogger
   experiment_name: lightning_logs
