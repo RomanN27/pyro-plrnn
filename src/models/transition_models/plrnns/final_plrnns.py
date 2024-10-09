@@ -5,7 +5,7 @@ from src.utils.mixin_utils import get_nested_signature
 from src.models.normalizer_mixins import PLRNNNormalizerMixin
 from src.models.transition_models.plrnns.raw_plrnns import _DendPLRNN, _ShallowPLRNN, _ClippedDendPLRNN, \
     _ClippedShallowPLRNN
-
+from src.models.hierarchization_mixin import DeterministicHierarchizationMixin
 import inspect
 from functools import wraps
 
@@ -62,6 +62,9 @@ class ConstantCovShallowPLRNN(ConstantCovarianceMixin, ShallowPLRNN): ...
 
 
 class ConstantCovClippedShallowPLRNN(ConstantCovarianceMixin, ClippedShallowPLRNN): ...
+
+class HierarchicalClippedShallowPLRNN(DeterministicHierarchizationMixin, ClippedShallowPLRNN): ...
+
 
 #TODO fix signature
 

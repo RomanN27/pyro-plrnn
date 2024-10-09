@@ -154,4 +154,31 @@ class TimeSeriesCNN(nn.Module):
 
 
 
+class SimpleNormalLatentFactorNNGuide(LightningModule):
+
+    def __init__(self, n_time_steps: int, input_dim: int, n_latent_factors: int , hidden_dim):
+        super().__init__()
+        self.output_dim= n_latent_factors
+        self.lin_1 = nn.Linear(n_time_steps*input_dim,hidden_dim)
+        self.relu_1 = nn.ReLU()
+        self.scale_layer = nn.Linear(hidden_dim, n_latent_factors ** 2)
+        self.softplus= nn.Softplus()
+        self.mu_layer = nn.Linear(hidden_dim,n_latent_factors)
+
+
+    def forward(self, batch: torch.Tensor):
+        x = self.relu_1(self.lin_1(batch.reshape(batch.size(0),-1 )))
+        scale = self.scale_layer(x).reshape(batch.size(0),batch.size(1),self.output_dim,self.output_dim)
+        scale_diag = torch.diagonal(scale,dim1=-2,dim2=-1)
+        scale_diag = self.softplus(scale_diag)
+        scale_diag = torch.diag_embed(scale_diag)
+        scale_lower_tria = torch.tril(scale,diagonal=-1)
+        scale = scale_lower_tria + scale_diag
+
+        mu = self.mu_layer(x).reshape(batch.size(0),batch.size(1),self.output_dim)
+
+        pyro.sample("latent_factors", MultivariateNormal(mu, scale_tril=scale).to_event(1))
+
+
+
 

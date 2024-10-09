@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Type, Optional, Protocol, Callable
+from typing import Type, Optional, Protocol, Callable, Generic
 
 import torch
 from lightning import LightningModule
@@ -23,12 +23,13 @@ class ElboLoss(Protocol):
 
     def differentiable_loss(self, model: Callable, guide: Callable, *args, **kwargs) -> torch.Tensor: ...
 
-class BaseLightninglHiddenMarkov(LightningModule):
+
+class BaseLightninglHiddenMarkov(LightningModule, Generic[LatentModelType, ObservationModelType]):
     def __init__(self, hidden_markov_model: HiddenMarkovModel[ObservationModelType, LatentModelType],
                  variational_distribution: nn.Module,
                  optimizer: Type[Optimizer],
                  metric_collections: dict[Stage, MetricCollection],
-                 messengers:Optional[ list[Messenger]]= None) -> None:
+                 messengers: Optional[list[Messenger]] = None) -> None:
         super().__init__()
 
         self.hidden_markov_model = hidden_markov_model
@@ -44,7 +45,7 @@ class BaseLightninglHiddenMarkov(LightningModule):
         if stage not in self.metric_collections:
             return
 
-        self.metric_collections[stage].log(self.logger, _step = str(self.current_epoch))
+        self.metric_collections[stage].log(self.logger, _step=str(self.current_epoch))
         self.metric_collections[stage].reset()
 
     def on_train_epoch_end(self) -> None:
@@ -54,22 +55,20 @@ class BaseLightninglHiddenMarkov(LightningModule):
         if stage not in self.metric_collections:
             return
 
-        self.metric_collections[stage].update(hmm = self.hidden_markov_model,
-                                 batch = batch,
-                                 forecaster = self.forecaster,
-                                 guide = self.variational_distribution)
+        self.metric_collections[stage].update(hmm=self.hidden_markov_model,
+                                              batch=batch,
+                                              forecaster=self.forecaster,
+                                              guide=self.variational_distribution)
 
-    def validation_step(self,batch: torch.Tensor) -> STEP_OUTPUT:
+    def validation_step(self, batch: torch.Tensor) -> STEP_OUTPUT:
         self.update_metric_collection(Stage.val, batch)
 
     def on_validation_end(self) -> None:
         self.log_metric_collection(Stage.val)
 
-    def test_step(self,batch: torch.Tensor) -> STEP_OUTPUT:
+    def test_step(self, batch: torch.Tensor) -> STEP_OUTPUT:
         torch.set_grad_enabled(True)
         self.update_metric_collection(Stage.test, batch)
 
     def on_test_end(self) -> None:
         self.log_metric_collection(Stage.test)
-
-

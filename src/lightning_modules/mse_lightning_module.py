@@ -1,5 +1,8 @@
 import torch
 from typing import  Optional
+
+from lightning.pytorch.utilities.types import OptimizerLRScheduler
+
 from src.lightning_modules.base_lightning_module import BaseLightninglHiddenMarkov
 from src.lightning_modules.base_lightning_module import Stage
 from src.pyro_messengers.handlers import mean, force
@@ -9,7 +12,6 @@ from src.regularization.manifold_attractor_regularization import ManifoldAttract
 from pyro.poutine.handlers import trace
 import  matplotlib.pyplot as plt
 from lightning.pytorch.utilities import grad_norm
-
 plt.ioff()
 class MSETeacherForcing(BaseLightninglHiddenMarkov):
 
@@ -50,6 +52,12 @@ class MSETeacherForcing(BaseLightninglHiddenMarkov):
         self.on_before_optimizer_step(optimizer.optimizer)
         optimizer.step()
         return loss + reg
+
+
+class HierarchicalMSETeacherForcing(BaseLightninglHiddenMarkov):
+
+    def configure_optimizers(self):
+        hmm_parameters = self.hidden_markov_model.named_parameters()
 
 
 
